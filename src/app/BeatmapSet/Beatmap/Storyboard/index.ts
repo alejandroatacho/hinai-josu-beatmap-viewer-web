@@ -394,6 +394,7 @@ export default class Storyboard extends ScopedClass {
 		this.foregroundLayer.destroy();
 		this.backgroundLayer.destroy();
 		this.overlayLayer.destroy();
+		this.fill.destroy();
 		this.container.destroy();
 	}
 }
