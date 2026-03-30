@@ -29,7 +29,7 @@ import { inject, provide, ScopedClass } from "../Context";
 import type { Resource } from "../ZipHandler";
 import { consumePrefetchedAudio } from "./BeatmapDownloader";
 import type MirrorConfig from "../Config/MirrorConfig";
-import { isHinaiMirror } from "../Config/MirrorConfig";
+import { HINAI_MIRROR_BASE, isHinaiMirror } from "../Config/MirrorConfig";
 import Beatmap from "./Beatmap";
 import type DrawableHitCircle from "./Beatmap/HitObjects/DrawableHitCircle";
 import type DrawableSlider from "./Beatmap/HitObjects/DrawableSlider";
@@ -188,9 +188,11 @@ export default class BeatmapSet extends ScopedClass {
 	slaves: Set<Beatmap> = new Set();
 
 	audioKey = "";
+	private audioLoadVersion = 0;
 	async loadAudio(beatmap: Beatmap) {
 		if (beatmap.data.general.audioFilename === this.audioKey) return;
 
+		const myVersion = ++this.audioLoadVersion;
 		this.audioKey = beatmap.data.general.audioFilename;
 		console.time("Constructing audio");
 		let audioFile = this.context
@@ -211,12 +213,15 @@ export default class BeatmapSet extends ScopedClass {
 				if (!audioFile) {
 					inject<Loading>("ui/loading")?.setText("Loading audio...");
 					try {
-						const resp = await fetch(`https://mirror.hinamizawa.ai/api/v2/josu/audio/${setId}`);
+						const resp = await fetch(`${HINAI_MIRROR_BASE}/api/v2/josu/audio/${setId}`);
 						if (resp.ok) audioFile = await resp.blob();
 					} catch {}
 				}
 			}
 		}
+
+		// Abort if a newer loadAudio call started while we were awaiting
+		if (myVersion !== this.audioLoadVersion) return;
 
 		if (!audioFile) throw new Error("Cannot find audio in resource?");
 

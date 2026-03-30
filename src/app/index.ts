@@ -17,9 +17,8 @@ document.addEventListener("keydown", (event) => {
 	// Skip game shortcuts when focus is in an editable element
 	const activeEl = document.activeElement;
 	const isEditable =
-		activeEl?.tagName === "INPUT" ||
-		activeEl?.tagName === "TEXTAREA" ||
-		activeEl?.getAttribute("contenteditable") === "true";
+		activeEl instanceof HTMLElement &&
+		(activeEl.matches("input, textarea, select") || activeEl.isContentEditable);
 	if (isEditable) return;
 
 	const key = event.key;
