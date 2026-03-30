@@ -1,6 +1,7 @@
 import ky from "ky";
 import type Loading from "@/UI/loading";
 import type MirrorConfig from "../Config/MirrorConfig";
+import { HINAI_MIRROR_BASE, isHinaiMirror } from "../Config/MirrorConfig";
 import { inject } from "../Context";
 
 type BeatmapData = {
@@ -70,6 +71,64 @@ export function processID(id: string): {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Hinai fast path — uses /api/v2/josu/ endpoints (DuckDB, ~3ms)
+// ---------------------------------------------------------------------------
+
+async function getBeatmapsetIdFromHinai(beatmapId: string): Promise<number | null> {
+	try {
+		inject<Loading>("ui/loading")?.setText("Resolving via Hinai...");
+		const data = await ky
+			.get(`${HINAI_MIRROR_BASE}/api/v2/josu/resolve/${beatmapId}`)
+			.json<{ beatmapset_id: number }>();
+		return data.beatmapset_id ?? null;
+	} catch {
+		return null;
+	}
+}
+
+async function fetchBundleFromHinai(
+	beatmapsetId: string | number,
+): Promise<Blob | null> {
+	try {
+		inject<Loading>("ui/loading")?.setText("Downloading from Hinai...");
+		const blob = await ky
+			.get(`${HINAI_MIRROR_BASE}/api/v2/josu/bundle/${beatmapsetId}`, {
+				onDownloadProgress(progressEvent) {
+					inject<Loading>("ui/loading")?.setText(
+						`Downloading from Hinai: ${(100 * (progressEvent.percent ?? 0)).toFixed(0)}%`,
+					);
+				},
+			})
+			.blob();
+		return blob;
+	} catch {
+		return null;
+	}
+}
+
+// Prefetched audio promise — starts loading in parallel with bundle download.
+// Consumed by BeatmapSet.loadAudio() when audio isn't in the extracted resources.
+let _prefetchedAudio: Promise<Blob | null> | null = null;
+
+function prefetchAudio(beatmapsetId: string | number) {
+	_prefetchedAudio = fetch(`${HINAI_MIRROR_BASE}/api/v2/josu/audio/${beatmapsetId}`)
+		.then(r => r.ok ? r.blob() : null)
+		.catch(() => null);
+}
+
+/** Get prefetched audio blob (if available). Clears after consumption. */
+export async function consumePrefetchedAudio(): Promise<Blob | null> {
+	if (!_prefetchedAudio) return null;
+	const result = await _prefetchedAudio;
+	_prefetchedAudio = null;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// Default path — uses try-z.net + mirror cascade (external, slower)
+// ---------------------------------------------------------------------------
+
 async function getBeatmapsetId(beatmapId: string) {
 	try {
 		if (!/\d+/g.test(beatmapId)) throw new Error("beatmapId is not a number!");
@@ -102,15 +161,37 @@ async function getBeatmapsetIdFromHash(hash: string) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Public API — auto-selects Hinai fast path or default based on mirror config
+// ---------------------------------------------------------------------------
+
 export async function getBeatmapFromId(
 	beatmapId: string,
 	beatmapSetId?: string,
 ) {
-	const beatmapsetId = beatmapSetId ?? (await getBeatmapsetId(beatmapId));
+	const mirrorConfig = inject<MirrorConfig>("config/mirror");
+	const useHinai = mirrorConfig && isHinaiMirror(mirrorConfig.mirror);
+
+	// Resolve beatmapset ID via Hinai (DuckDB ~3ms) or try-z.net (external ~350ms)
+	let beatmapsetId: string | number | null = beatmapSetId ?? null;
+	if (!beatmapsetId) {
+		beatmapsetId = useHinai
+			? await getBeatmapsetIdFromHinai(beatmapId)
+			: await getBeatmapsetId(beatmapId);
+	}
+
 	if (!beatmapsetId)
 		throw new Error(
 			`Map(set) with id ${beatmapId ?? beatmapSetId} does not exist!!!`,
 		);
+
+	// Hinai: start audio prefetch in parallel, then download lightweight bundle
+	if (useHinai) {
+		prefetchAudio(beatmapsetId); // fires immediately, consumed by loadAudio()
+		const bundle = await fetchBundleFromHinai(beatmapsetId);
+		if (bundle) return bundle;
+		// Fall through to full .osz if bundle fails
+	}
 
 	return await fetchBlobFromMirror(beatmapsetId);
 }
@@ -130,10 +211,11 @@ const fetchBlobFromMirror = async (
 	if (!mirrorConfig) throw new Error("Mirror Config not initialized yet!!!");
 
 	const {
-		mirror: { urlTemplate },
+		mirror: { urlTemplate, name: mirrorName },
 	} = mirrorConfig;
 
-	const allMirrors = [
+	// Get mirrors from DOM radio buttons (standalone mode)
+	const radioMirrors = [
 		...document.querySelectorAll<HTMLInputElement>("[name=beatmapMirror]"),
 	]
 		.map((ele) => ({
@@ -143,9 +225,14 @@ const fetchBlobFromMirror = async (
 		}))
 		.toSorted((a, b) => +a.rank - +b.rank);
 
-	const configIndex = allMirrors.findIndex(
+	// Embed mode: no radio buttons exist — use configured mirror directly
+	const allMirrors = radioMirrors.length > 0
+		? radioMirrors
+		: [{ url: urlTemplate, rank: "0", name: mirrorName }];
+
+	const configIndex = Math.max(0, allMirrors.findIndex(
 		(entry) => entry.url === urlTemplate.trim(),
-	);
+	));
 	const sortedMirrors = [
 		allMirrors[configIndex],
 		...allMirrors.slice(0, configIndex),

@@ -27,6 +27,7 @@ import Video from "@/Video";
 import extraMode from "/assets/extra-mode.svg?raw";
 import { inject, provide, ScopedClass } from "../Context";
 import type { Resource } from "../ZipHandler";
+import { consumePrefetchedAudio } from "./BeatmapDownloader";
 import Beatmap from "./Beatmap";
 import type DrawableHitCircle from "./Beatmap/HitObjects/DrawableHitCircle";
 import type DrawableSlider from "./Beatmap/HitObjects/DrawableSlider";
@@ -190,9 +191,27 @@ export default class BeatmapSet extends ScopedClass {
 
 		this.audioKey = beatmap.data.general.audioFilename;
 		console.time("Constructing audio");
-		const audioFile = this.context
+		let audioFile = this.context
 			.consume<Map<string, Resource>>("resources")
 			?.get(this.audioKey.toLowerCase());
+
+		// If audio not in resources (Hinai bundle = .osu only), use prefetched or fetch full audio
+		if (!audioFile) {
+			// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
+			audioFile = await consumePrefetchedAudio() ?? undefined;
+
+			// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
+			if (!audioFile) {
+				const setId = beatmap.data.metadata.beatmapSetId;
+				if (setId) {
+					inject<Loading>("ui/loading")?.setText("Loading audio...");
+					try {
+						const resp = await fetch(`https://mirror.hinamizawa.ai/api/v2/josu/audio/${setId}`);
+						if (resp.ok) audioFile = await resp.blob();
+					} catch {}
+				}
+			}
+		}
 
 		if (!audioFile) throw new Error("Cannot find audio in resource?");
 

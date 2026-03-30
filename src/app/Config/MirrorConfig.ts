@@ -9,6 +9,15 @@ export type MirrorProps = {
 	mirror?: Mirror;
 };
 
+// Hinai Beatmap Mirror base URL — used for v2 josu optimization endpoints
+export const HINAI_MIRROR_BASE = "https://mirror.hinamizawa.ai";
+export const HINAI_MIRROR_NAME = "Hinai";
+
+/** Check if the currently selected mirror is Hinai Beatmap Mirror */
+export function isHinaiMirror(mirror: Mirror): boolean {
+	return mirror.urlTemplate.includes("mirror.hinamizawa.ai");
+}
+
 export default class MirrorConfig extends ConfigSection {
 	constructor(defaultOptions?: MirrorProps) {
 		super();
@@ -25,7 +34,7 @@ export default class MirrorConfig extends ConfigSection {
 	}
 
 	private _mirror = {
-		name: "mirror.hinamizawa.ai",
+		name: HINAI_MIRROR_NAME,
 		urlTemplate: "https://mirror.hinamizawa.ai/d/$setId?proxy=true",
 	};
 	get mirror() {
@@ -69,7 +78,8 @@ export default class MirrorConfig extends ConfigSection {
 	migrate(val: Mirror) {
 		switch (val.name) {
 			case "Hinamizawa":
-			case "mirror.hinamizawa.ai": {
+			case "mirror.hinamizawa.ai":
+			case "Hinai": {
 				return "https://mirror.hinamizawa.ai/d/$setId?proxy=true";
 			}
 			case "Nerinyan": {

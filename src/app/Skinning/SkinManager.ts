@@ -64,11 +64,14 @@ export default class SkinManager {
 
 		await this.loadDefaultSkin();
 
+		// When custom skin is enabled, default to index 0 (Hinamizawa skin)
+		// unless the user has explicitly changed skins before
+		const savedIdx = inject<SkinningConfig>("config/skinning")?.skinningIdx;
+		const skinIdx = CUSTOM_DEFAULT_SKIN && (savedIdx === undefined || savedIdx === null) ? 0 : (savedIdx ?? 0);
+
 		await Promise.all([
 			this.refreshSkinList(),
-			this.loadSkin(
-				inject<SkinningConfig>("config/skinning")?.skinningIdx ?? 0,
-			),
+			this.loadSkin(skinIdx),
 		]);
 
 		inject<SkinningConfig>("config/skinning")?.onChange("skin", async (val) => {
