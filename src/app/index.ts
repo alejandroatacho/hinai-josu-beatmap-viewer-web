@@ -27,10 +27,10 @@ document.addEventListener("keydown", (event) => {
 	// Default: ArrowLeft / ArrowRight
 	// Hinai:   A / D (arrows reserved for diff switching)
 	const isSeekBack = HINAI_ENVIRONMENT
-		? (key === "a" || key === "A") && !event.ctrlKey
+		? (key === "a" || key === "A") && !event.ctrlKey && !event.metaKey
 		: key === "ArrowLeft";
 	const isSeekFwd = HINAI_ENVIRONMENT
-		? (key === "d" || key === "D") && !event.ctrlKey
+		? (key === "d" || key === "D") && !event.ctrlKey && !event.metaKey
 		: key === "ArrowRight";
 
 	// --- Play / Pause ---
@@ -46,31 +46,24 @@ document.addEventListener("keydown", (event) => {
 	const isDiffNext = HINAI_ENVIRONMENT && key === "ArrowRight";
 
 	if (isSeekBack) {
-		bms.smoothTick(
-			-1,
-			event.shiftKey,
-			bms.context.consume<Audio>("audio")?.state === "PLAYING",
-		);
+		bms.smoothTick(-1, event.shiftKey, audio?.state === "PLAYING");
 		return;
 	}
 
 	if (isSeekFwd) {
-		bms.smoothTick(
-			1,
-			event.shiftKey,
-			bms.context.consume<Audio>("audio")?.state === "PLAYING",
-		);
+		bms.smoothTick(1, event.shiftKey, audio?.state === "PLAYING");
 		return;
 	}
 
 	if (isToggle) {
-		if (event.repeat) return;
 		event.preventDefault();
+		if (event.repeat) return;
 		bms.toggle();
 		return;
 	}
 
 	if (isDiffPrev || isDiffNext) {
+		event.preventDefault();
 		if (_loadingDiff) return;
 		if (!bms.master || bms.difficulties.length <= 1) return;
 		const currentIdx = bms.difficulties.indexOf(bms.master);

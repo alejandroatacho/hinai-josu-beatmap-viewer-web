@@ -190,14 +190,14 @@ export default class BeatmapSet extends ScopedClass {
 	audioKey = "";
 	private audioLoadVersion = 0;
 	async loadAudio(beatmap: Beatmap) {
-		if (beatmap.data.general.audioFilename === this.audioKey) return;
+		const newAudioKey = beatmap.data.general.audioFilename;
+		if (newAudioKey === this.audioKey) return;
 
 		const myVersion = ++this.audioLoadVersion;
-		this.audioKey = beatmap.data.general.audioFilename;
 		console.time("Constructing audio");
 		let audioFile = this.context
 			.consume<Map<string, Resource>>("resources")
-			?.get(this.audioKey.toLowerCase());
+			?.get(newAudioKey.toLowerCase());
 
 		// If audio not in resources (Hinai bundle = .osu only), use prefetched or fetch full audio
 		if (!audioFile) {
@@ -234,6 +234,7 @@ export default class BeatmapSet extends ScopedClass {
 			new Audio(this.audioContext).hook(this.context),
 		);
 		await audio.createBufferNode(audioFile);
+		this.audioKey = newAudioKey;
 
 		console.timeEnd("Constructing audio");
 	}

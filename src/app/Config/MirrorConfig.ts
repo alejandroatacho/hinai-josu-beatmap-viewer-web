@@ -24,8 +24,9 @@ export default class MirrorConfig extends ConfigSection {
 
 		this.loadEventListeners();
 
-		if (defaultOptions?.mirror !== undefined) {
-			this.mirror = defaultOptions.mirror;
+		const m = defaultOptions?.mirror;
+		if (m && typeof m.name === "string" && typeof m.urlTemplate === "string") {
+			this.mirror = m;
 		}
 
 		// Always sync radio buttons to reflect current mirror state —
