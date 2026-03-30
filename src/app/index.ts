@@ -64,6 +64,7 @@ document.addEventListener("keydown", (event) => {
 	}
 
 	if (isToggle) {
+		if (event.repeat) return;
 		event.preventDefault();
 		bms.toggle();
 		return;

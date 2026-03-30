@@ -15,7 +15,7 @@ export const HINAI_MIRROR_NAME = "Hinai";
 
 /** Check if the currently selected mirror is Hinai Beatmap Mirror */
 export function isHinaiMirror(mirror: Mirror): boolean {
-	return mirror.urlTemplate.includes("mirror.hinamizawa.ai");
+	return mirror.urlTemplate.includes(HINAI_MIRROR_BASE);
 }
 
 export default class MirrorConfig extends ConfigSection {
@@ -35,7 +35,7 @@ export default class MirrorConfig extends ConfigSection {
 
 	private _mirror = {
 		name: HINAI_MIRROR_NAME,
-		urlTemplate: "https://mirror.hinamizawa.ai/d/$setId?proxy=true",
+		urlTemplate: `${HINAI_MIRROR_BASE}/d/$setId?proxy=true`,
 	};
 	get mirror() {
 		return this._mirror;
@@ -44,7 +44,7 @@ export default class MirrorConfig extends ConfigSection {
 		this._mirror = { ...val, name: this.migrateName(val), urlTemplate: this.migrate(val) };
 
 		this.syncRadioButtons();
-		this.emitChange("mirror", val);
+		this.emitChange("mirror", this._mirror);
 	}
 
 	private syncRadioButtons() {
@@ -94,7 +94,7 @@ export default class MirrorConfig extends ConfigSection {
 			case "Hinamizawa":
 			case "mirror.hinamizawa.ai":
 			case "Hinai": {
-				return "https://mirror.hinamizawa.ai/d/$setId?proxy=true";
+				return `${HINAI_MIRROR_BASE}/d/$setId?proxy=true`;
 			}
 			case "Nerinyan": {
 				return "https://api.nerinyan.moe/v2/d/$setId";

@@ -208,6 +208,7 @@ export default class BeatmapSet extends ScopedClass {
 			if (useHinai && setId) {
 				// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
 				audioFile = await consumePrefetchedAudio(setId) ?? undefined;
+				if (myVersion !== this.audioLoadVersion) return;
 
 				// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
 				if (!audioFile) {
