@@ -1,6 +1,84 @@
 import ky from "ky";
 import type { Resource } from "./ZipHandler";
 
+// ──────────────────────────────────────────────────────────────────────────────
+// CUSTOM DEFAULT SKIN — When true, loads Hinamizawa's skin as the default.
+// Default: false (upstream-safe). Set VITE_CUSTOM_DEFAULT_SKIN=true at build
+// time to enable (e.g. in Dockerfile). Skin files in public/skinning/hinamizawa/.
+// ──────────────────────────────────────────────────────────────────────────────
+export const CUSTOM_DEFAULT_SKIN = import.meta.env.VITE_CUSTOM_DEFAULT_SKIN === "true";
+
+// ──────────────────────────────────────────────────────────────────────────────
+// HINAI ENVIRONMENT — Enables Hinamizawa-specific customizations (key remaps,
+// UI tweaks) without breaking upstream. Same pattern: default false, override
+// via VITE_HINAI_ENVIRONMENT=true build arg in K8s.
+// ──────────────────────────────────────────────────────────────────────────────
+export const HINAI_ENVIRONMENT = import.meta.env.VITE_HINAI_ENVIRONMENT === "true";
+
+export async function getHinamizawaSkin() {
+	const defaults = [...Array(10)].map((_, idx) => `default-${idx}.png`);
+	const hitSounds = ["drum", "normal"].map((hitSample) =>
+		[
+			"hitclap",
+			"hitfinish",
+			"hitnormal",
+			"hitwhistle",
+			"sliderslide",
+			"slidertick",
+			"sliderwhistle",
+		].map((hitSound) => `${hitSample}-${hitSound}.wav`),
+	);
+
+	const filenames = [
+		"approachcircle.png",
+		...defaults,
+		...hitSounds.reduce((accm, curr) => {
+			accm.push(...curr);
+			return accm;
+		}, []),
+		"cursor.png",
+		"cursortrail.png",
+		"followpoint.png",
+		"hit300.png",
+		"hit100.png",
+		"hit50.png",
+		"hit0.png",
+		"hitcircle.png",
+		"hitcircleoverlay.png",
+		"skin.ini",
+		"sliderb0.png",
+		"sliderfollowcircle.png",
+		"reversearrow.png",
+		"sliderscorepoint.png",
+		"sliderstartcircle.png",
+		"sliderstartcircleoverlay.png",
+		"sliderendcircle.png",
+		"spinner-approachcircle.png",
+		"spinner-circle.png",
+		"spinner-background.png",
+		"spinner-clear.png",
+		"spinner-middle.png",
+		"spinner-middle2.png",
+		"spinner-top.png",
+		"spinner-glow.png",
+		"combobreak.wav",
+	];
+
+	const resources = new Map<string, Resource>();
+	await Promise.all(
+		filenames.map(async (filename) => {
+			try {
+				const data = await ky.get<Blob>(`./skinning/hinamizawa/${filename}`).blob();
+				resources.set(filename, data);
+			} catch {
+				return;
+			}
+		}),
+	);
+
+	return resources;
+}
+
 export async function getArgon() {
 	const defaults = [...Array(10)].map((_, idx) => `default-${idx}@2x.png`);
 	const hitSounds = ["drum", "normal", "soft"].map((hitSample) =>

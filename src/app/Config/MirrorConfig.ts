@@ -25,7 +25,7 @@ export default class MirrorConfig extends ConfigSection {
 	}
 
 	private _mirror = {
-		name: "Hinamizawa",
+		name: "mirror.hinamizawa.ai",
 		urlTemplate: "https://mirror.hinamizawa.ai/d/$setId?proxy=true",
 	};
 	get mirror() {
@@ -68,7 +68,8 @@ export default class MirrorConfig extends ConfigSection {
 
 	migrate(val: Mirror) {
 		switch (val.name) {
-			case "Hinamizawa": {
+			case "Hinamizawa":
+			case "mirror.hinamizawa.ai": {
 				return "https://mirror.hinamizawa.ai/d/$setId?proxy=true";
 			}
 			case "Nerinyan": {

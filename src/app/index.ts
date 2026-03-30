@@ -4,6 +4,7 @@ import type Audio from "./Audio";
 import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
+import { HINAI_ENVIRONMENT } from "./Initiator";
 
 document.addEventListener("keydown", (event) => {
 	const bms = inject<BeatmapSet>("beatmapset");
@@ -11,34 +12,71 @@ document.addEventListener("keydown", (event) => {
 
 	if (!bms || !audio) return;
 
-	switch (event.key) {
-		case "ArrowLeft": {
-			bms.smoothTick(
-				-1,
-				event.shiftKey,
-				bms.context.consume<Audio>("audio")?.state === "PLAYING",
-			);
-			break;
-		}
-		case "ArrowRight": {
-			bms.smoothTick(
-				1,
-				event.shiftKey,
-				bms.context.consume<Audio>("audio")?.state === "PLAYING",
-			);
-			break;
-		}
-		case " ": {
-			const activeElement = document.activeElement;
-			if (
-				activeElement?.tagName === "INPUT" &&
-				activeElement?.getAttribute("type") === "text"
-			)
-				return;
-			bms.toggle();
+	const key = event.key;
 
-			break;
-		}
+	// --- Seek backward / forward ---
+	// Default: ArrowLeft / ArrowRight
+	// Hinai:   A / D (arrows reserved for diff switching)
+	const isSeekBack = HINAI_ENVIRONMENT
+		? (key === "a" || key === "A") && !event.ctrlKey
+		: key === "ArrowLeft";
+	const isSeekFwd = HINAI_ENVIRONMENT
+		? (key === "d" || key === "D") && !event.ctrlKey
+		: key === "ArrowRight";
+
+	// --- Play / Pause ---
+	// Default: Space
+	// Hinai:   P (+ Space still works)
+	const isToggle = HINAI_ENVIRONMENT
+		? key === "p" || key === "P" || key === " "
+		: key === " ";
+
+	// --- Switch difficulty (Hinai only) ---
+	// ArrowLeft / ArrowRight cycle through difficulties
+	const isDiffPrev = HINAI_ENVIRONMENT && key === "ArrowLeft";
+	const isDiffNext = HINAI_ENVIRONMENT && key === "ArrowRight";
+
+	if (isSeekBack) {
+		bms.smoothTick(
+			-1,
+			event.shiftKey,
+			bms.context.consume<Audio>("audio")?.state === "PLAYING",
+		);
+		return;
+	}
+
+	if (isSeekFwd) {
+		bms.smoothTick(
+			1,
+			event.shiftKey,
+			bms.context.consume<Audio>("audio")?.state === "PLAYING",
+		);
+		return;
+	}
+
+	if (isToggle) {
+		const activeElement = document.activeElement;
+		if (
+			activeElement?.tagName === "INPUT" &&
+			activeElement?.getAttribute("type") === "text"
+		)
+			return;
+		event.preventDefault();
+		bms.toggle();
+		return;
+	}
+
+	if (isDiffPrev || isDiffNext) {
+		if (!bms.master || bms.difficulties.length <= 1) return;
+		const currentIdx = bms.difficulties.indexOf(bms.master);
+		const nextIdx = isDiffNext
+			? (currentIdx + 1) % bms.difficulties.length
+			: (currentIdx - 1 + bms.difficulties.length) % bms.difficulties.length;
+		bms.loadMaster(nextIdx);
+		return;
+	}
+
+	switch (key) {
 		case "c":
 		case "C": {
 			if (!event.ctrlKey) return;
