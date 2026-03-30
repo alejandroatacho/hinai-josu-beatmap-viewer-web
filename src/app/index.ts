@@ -4,6 +4,9 @@ import type Audio from "./Audio";
 import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
+import { HINAI_ENVIRONMENT } from "./Initiator";
+
+let _loadingDiff = false;
 
 document.addEventListener("keydown", (event) => {
 	const bms = inject<BeatmapSet>("beatmapset");
@@ -11,34 +14,70 @@ document.addEventListener("keydown", (event) => {
 
 	if (!bms || !audio) return;
 
-	switch (event.key) {
-		case "ArrowLeft": {
-			bms.smoothTick(
-				-1,
-				event.shiftKey,
-				bms.context.consume<Audio>("audio")?.state === "PLAYING",
-			);
-			break;
-		}
-		case "ArrowRight": {
-			bms.smoothTick(
-				1,
-				event.shiftKey,
-				bms.context.consume<Audio>("audio")?.state === "PLAYING",
-			);
-			break;
-		}
-		case " ": {
-			const activeElement = document.activeElement;
-			if (
-				activeElement?.tagName === "INPUT" &&
-				activeElement?.getAttribute("type") === "text"
-			)
-				return;
-			bms.toggle();
+	// Skip game shortcuts when focus is in an editable element
+	const activeEl = document.activeElement;
+	const isEditable =
+		activeEl instanceof HTMLElement &&
+		(activeEl.matches("input, textarea, select") || activeEl.isContentEditable);
+	if (isEditable) return;
 
-			break;
-		}
+	const key = event.key;
+
+	// --- Seek backward / forward ---
+	// Default: ArrowLeft / ArrowRight
+	// Hinai:   A / D (arrows reserved for diff switching)
+	const isSeekBack = HINAI_ENVIRONMENT
+		? (key === "a" || key === "A") && !event.ctrlKey && !event.metaKey
+		: key === "ArrowLeft";
+	const isSeekFwd = HINAI_ENVIRONMENT
+		? (key === "d" || key === "D") && !event.ctrlKey && !event.metaKey
+		: key === "ArrowRight";
+
+	// --- Play / Pause ---
+	// Default: Space
+	// Hinai:   P (+ Space still works)
+	const isToggle = HINAI_ENVIRONMENT
+		? ((key === "p" || key === "P") && !event.ctrlKey && !event.metaKey && !event.altKey) || key === " "
+		: key === " ";
+
+	// --- Switch difficulty (Hinai only) ---
+	// ArrowLeft / ArrowRight cycle through difficulties
+	const isDiffPrev = HINAI_ENVIRONMENT && key === "ArrowLeft";
+	const isDiffNext = HINAI_ENVIRONMENT && key === "ArrowRight";
+
+	if (isSeekBack) {
+		bms.smoothTick(-1, event.shiftKey, audio?.state === "PLAYING");
+		return;
+	}
+
+	if (isSeekFwd) {
+		bms.smoothTick(1, event.shiftKey, audio?.state === "PLAYING");
+		return;
+	}
+
+	if (isToggle) {
+		event.preventDefault();
+		if (event.repeat) return;
+		bms.toggle();
+		return;
+	}
+
+	if (isDiffPrev || isDiffNext) {
+		event.preventDefault();
+		if (_loadingDiff) return;
+		if (!bms.master || bms.difficulties.length <= 1) return;
+		const currentIdx = bms.difficulties.indexOf(bms.master);
+		const nextIdx = isDiffNext
+			? (currentIdx + 1) % bms.difficulties.length
+			: (currentIdx - 1 + bms.difficulties.length) % bms.difficulties.length;
+		_loadingDiff = true;
+		bms.loadMaster(nextIdx).finally(() => {
+			_loadingDiff = false;
+		});
+		return;
+	}
+
+	switch (key) {
 		case "c":
 		case "C": {
 			if (!event.ctrlKey) return;

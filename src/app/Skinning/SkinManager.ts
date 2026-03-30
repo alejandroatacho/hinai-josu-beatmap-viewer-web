@@ -1,7 +1,7 @@
 import type SkinningConfig from "@/Config/SkinningConfig";
 import type { Resource } from "@/ZipHandler";
 import { inject } from "../Context";
-import { getArgon, getDefaultLegacy, getYugen } from "../Initiator";
+import { CUSTOM_DEFAULT_SKIN, getArgon, getDefaultLegacy, getHinamizawaSkin, getYugen } from "../Initiator";
 import Database from "./Database";
 import Skin from "./Skin";
 
@@ -26,6 +26,7 @@ export default class SkinManager {
 			await this.indexed.remove("default");
 			await this.indexed.remove("yugen");
 			await this.indexed.remove("argon");
+			if (CUSTOM_DEFAULT_SKIN) await this.indexed.remove("hinamizawa");
 
 			await this.loadDefaultSkins();
 			await this.refreshSkinList();
@@ -64,11 +65,14 @@ export default class SkinManager {
 
 		await this.loadDefaultSkin();
 
+		// When custom skin is enabled, default to index 0 (Hinamizawa skin)
+		// unless the user has explicitly changed skins before
+		const savedIdx = inject<SkinningConfig>("config/skinning")?.skinningIdx;
+		const skinIdx = CUSTOM_DEFAULT_SKIN && (savedIdx === undefined || savedIdx === null) ? 0 : (savedIdx ?? 0);
+
 		await Promise.all([
 			this.refreshSkinList(),
-			this.loadSkin(
-				inject<SkinningConfig>("config/skinning")?.skinningIdx ?? 0,
-			),
+			this.loadSkin(skinIdx),
 		]);
 
 		inject<SkinningConfig>("config/skinning")?.onChange("skin", async (val) => {
@@ -200,6 +204,18 @@ export default class SkinManager {
 
 	async loadDefaultSkins() {
 		const allKeys = await this.indexed.getAllKeys();
+
+		// Custom Hinamizawa skin — loaded first so it becomes index 0 (default)
+		if (CUSTOM_DEFAULT_SKIN && !(allKeys as unknown[]).includes("hinamizawa")) {
+			await this.indexed.add(
+				{
+					type: "DEFAULT",
+					name: "Hinamizawa",
+					resources: await getHinamizawaSkin(),
+				},
+				"hinamizawa",
+			);
+		}
 
 		if (!(allKeys as unknown[]).includes("default")) {
 			await this.indexed.add(

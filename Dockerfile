@@ -1,19 +1,34 @@
-# Use the official Bun image as the base image
-FROM oven/bun:latest
-
-# Set the working directory in the container
+# Build stage
+FROM oven/bun:1.2 AS builder
 WORKDIR /app
-
 COPY bun.lock package.json ./
-
-# Install dependencies
 RUN bun install --frozen-lockfile
-
-# Copy the current directory contents into the container at /app
 COPY . .
+# Hinamizawa overrides — default false (upstream-safe). Pass --build-arg to enable.
+ARG VITE_CUSTOM_DEFAULT_SKIN=false
+ARG VITE_HINAI_ENVIRONMENT=false
+ENV VITE_CUSTOM_DEFAULT_SKIN=$VITE_CUSTOM_DEFAULT_SKIN
+ENV VITE_HINAI_ENVIRONMENT=$VITE_HINAI_ENVIRONMENT
+RUN bun run build
 
-# Expose the port on which the API will listen
+# Runtime stage
+FROM oven/bun:1.2
+WORKDIR /app
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --ingroup appgroup appuser
+COPY --from=builder /app/package.json /app/bun.lock ./
+RUN bun install --frozen-lockfile --production
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/server ./src/server
+COPY --from=builder /app/public ./public
+RUN chown -R appuser:appgroup /app
+
+ENV NODE_ENV=production
 EXPOSE 8080
 
-# Run the server when the container launches
-CMD ["bun", "dev"]
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["bun", "-e", "const r=await fetch(`http://localhost:${process.env.PORT??8080}/`);process.exit(r.ok?0:1)"]
+
+CMD ["bun", "src/server/index.tsx"]

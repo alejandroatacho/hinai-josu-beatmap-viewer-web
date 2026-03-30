@@ -27,6 +27,9 @@ import Video from "@/Video";
 import extraMode from "/assets/extra-mode.svg?raw";
 import { inject, provide, ScopedClass } from "../Context";
 import type { Resource } from "../ZipHandler";
+import { consumePrefetchedAudio } from "./BeatmapDownloader";
+import type MirrorConfig from "../Config/MirrorConfig";
+import { HINAI_MIRROR_BASE, isHinaiMirror } from "../Config/MirrorConfig";
 import Beatmap from "./Beatmap";
 import type DrawableHitCircle from "./Beatmap/HitObjects/DrawableHitCircle";
 import type DrawableSlider from "./Beatmap/HitObjects/DrawableSlider";
@@ -185,14 +188,41 @@ export default class BeatmapSet extends ScopedClass {
 	slaves: Set<Beatmap> = new Set();
 
 	audioKey = "";
+	private audioLoadVersion = 0;
 	async loadAudio(beatmap: Beatmap) {
-		if (beatmap.data.general.audioFilename === this.audioKey) return;
+		const newAudioKey = beatmap.data.general.audioFilename;
+		if (newAudioKey === this.audioKey) return;
 
-		this.audioKey = beatmap.data.general.audioFilename;
+		const myVersion = ++this.audioLoadVersion;
 		console.time("Constructing audio");
-		const audioFile = this.context
+		let audioFile = this.context
 			.consume<Map<string, Resource>>("resources")
-			?.get(this.audioKey.toLowerCase());
+			?.get(newAudioKey.toLowerCase());
+
+		// If audio not in resources (Hinai bundle = .osu only), use prefetched or fetch full audio
+		if (!audioFile) {
+			const mirrorConfig = inject<MirrorConfig>("config/mirror");
+			const useHinai = mirrorConfig && isHinaiMirror(mirrorConfig.mirror);
+			const setId = beatmap.data.metadata.beatmapSetId;
+
+			if (useHinai && setId) {
+				// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
+				audioFile = await consumePrefetchedAudio(setId) ?? undefined;
+				if (myVersion !== this.audioLoadVersion) return;
+
+				// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
+				if (!audioFile) {
+					inject<Loading>("ui/loading")?.setText("Loading audio...");
+					try {
+						const resp = await fetch(`${HINAI_MIRROR_BASE}/api/v2/josu/audio/${setId}`);
+						if (resp.ok) audioFile = await resp.blob();
+					} catch {}
+				}
+			}
+		}
+
+		// Abort if a newer loadAudio call started while we were awaiting
+		if (myVersion !== this.audioLoadVersion) return;
 
 		if (!audioFile) throw new Error("Cannot find audio in resource?");
 
@@ -204,6 +234,7 @@ export default class BeatmapSet extends ScopedClass {
 			new Audio(this.audioContext).hook(this.context),
 		);
 		await audio.createBufferNode(audioFile);
+		this.audioKey = newAudioKey;
 
 		console.timeEnd("Constructing audio");
 	}

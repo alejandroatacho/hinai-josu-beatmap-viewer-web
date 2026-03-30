@@ -278,6 +278,20 @@
 		<div class="bg-base p-10 flex flex-col w-full gap-5">
 			<div class="font-medium">Beatmap Mirror</div>
 			<div class="grid grid-cols-2 gap-[5px] w-full">
+				<label class="font-normal flex-1 cursor-pointer flex items-center gap-5 p-2.5 rounded-xl border item" for="mirror-hinamizawa">
+					<img src="https://hinamizawa.ai/logoFix.png" alt="Hinai logo" style="width:24px;height:24px" /> <span>Hinai</span>
+					<input
+						type="radio"
+						name="beatmapMirror"
+						id="mirror-hinamizawa"
+						value="Hinai"
+						data-url="https://mirror.hinamizawa.ai/d/$setId?proxy=true"
+						data-rank="0"
+						tabindex="-1"
+						hidden
+						checked
+					/>
+				</label>
 				<label class="font-normal flex-1 cursor-pointer flex items-center gap-5 p-2.5 rounded-xl border item" for="mirror-nerinyan">
 					<img src="https://avatars.githubusercontent.com/u/92726970?s=200&v=4" /> <span>Nerinyan</span>
 					<input

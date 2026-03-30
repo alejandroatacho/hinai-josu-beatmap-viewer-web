@@ -147,22 +147,31 @@ export default class Config {
 	}
 
 	loadSettings(): Configs | null {
-		return JSON.parse(localStorage.getItem("josuSettings") ?? "null");
+		try {
+			return JSON.parse(localStorage.getItem("josuSettings") ?? "null");
+		} catch {
+			// localStorage throws SecurityError in cross-origin iframes
+			return null;
+		}
 	}
 
 	saveSettings() {
-		localStorage.setItem(
-			"josuSettings",
-			JSON.stringify({
-				audio: this.audio.jsonify(),
-				background: this.background.jsonify(),
-				mirror: this.mirror.jsonify(),
-				renderer: this.renderer.jsonify(),
-				skinning: this.skinning.jsonify(),
-				timeline: this.timeline.jsonify(),
-				experimental: this.experimental.jsonify(),
-				gameplay: this.gameplay.jsonify(),
-			}),
-		);
+		try {
+			localStorage.setItem(
+				"josuSettings",
+				JSON.stringify({
+					audio: this.audio.jsonify(),
+					background: this.background.jsonify(),
+					mirror: this.mirror.jsonify(),
+					renderer: this.renderer.jsonify(),
+					skinning: this.skinning.jsonify(),
+					timeline: this.timeline.jsonify(),
+					experimental: this.experimental.jsonify(),
+					gameplay: this.gameplay.jsonify(),
+				}),
+			);
+		} catch {
+			// localStorage unavailable in cross-origin iframes
+		}
 	}
 }
