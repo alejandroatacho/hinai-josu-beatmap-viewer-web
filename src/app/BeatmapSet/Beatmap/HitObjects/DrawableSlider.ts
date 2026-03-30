@@ -356,6 +356,7 @@ export default class DrawableSlider
 
 	set object(val: Slider) {
 		this._object = val;
+		this.lastGeometryState = { head: Infinity, tail: -Infinity, scale: -Infinity };
 
 		this.nodes.clear();
 		for (let i = 0; i < val.path.controlPoints.length; i++) {

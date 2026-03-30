@@ -60,9 +60,11 @@ export default class DifficultyGraph {
 	}
 
 	drawGraph(width = 360, height = 180) {
+		if (this.data.length === 0) return;
+
 		const newContext = new GraphicsContext();
 
-		const maxStrain = Math.max(...this.data.map(({ strain }) => strain));
+		const maxStrain = Math.max(...this.data.map(({ strain }) => strain)) || 1;
 		const maxTime = this.maxTime || this.data.at(-1)?.time || 1;
 
 		for (let i = 0; i < 6; i++) {

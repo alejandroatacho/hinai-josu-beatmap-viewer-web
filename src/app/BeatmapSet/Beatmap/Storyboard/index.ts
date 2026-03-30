@@ -390,9 +390,10 @@ export default class Storyboard extends ScopedClass {
 			sprite.destroy();
 		}
 
-		this.foregroundLayer.destroy(true);
-		this.backgroundLayer.destroy(true);
-		this.overlayLayer.destroy(true);
-		this.container.destroy(true);
+		// Don't pass true — children already destroyed by the loops above
+		this.foregroundLayer.destroy();
+		this.backgroundLayer.destroy();
+		this.overlayLayer.destroy();
+		this.container.destroy();
 	}
 }
