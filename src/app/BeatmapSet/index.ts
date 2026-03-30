@@ -418,9 +418,10 @@ export default class BeatmapSet extends ScopedClass {
 		}
 
 		const graph = inject<DifficultyGraph>("ui/sidepanel/modding/difficulty");
+		const audio = this.context.consume<Audio>("audio");
 
 		if (graph) {
-			graph.data = beatmap.strains;
+			graph.setData(beatmap.strains, (audio?.duration ?? 0) / 1000);
 		}
 
 		inject<Timeline>("ui/main/viewer/timeline")?.loadObjects(
