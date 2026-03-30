@@ -185,7 +185,6 @@ export async function getBeatmapFromId(
 	if (!beatmapsetId) {
 		if (useHinai) {
 			beatmapsetId = await getBeatmapsetIdFromHinai(beatmapId);
-			// Fall back to try-z.net if Hinai resolver misses (e.g. map not yet crawled)
 			if (!beatmapsetId) beatmapsetId = await getBeatmapsetId(beatmapId);
 		} else {
 			beatmapsetId = await getBeatmapsetId(beatmapId);

@@ -32,25 +32,24 @@ export default class Storyboard extends ScopedClass {
 		visible: inject<BackgroundConfig>("config/background")?.storyboard,
 	});
 
+	_mask!: Graphics;
+
 	backgroundLayer = new Container({
 		label: "backgroundLayer",
 		interactive: false,
 		interactiveChildren: false,
-		isRenderGroup: true,
 		sortableChildren: true,
 	});
 	foregroundLayer = new Container({
 		label: "foregroundLayer",
 		interactive: false,
 		interactiveChildren: false,
-		isRenderGroup: true,
 		sortableChildren: false,
 	});
 	overlayLayer = new Container({
 		label: "overlayLayer",
 		interactive: false,
 		interactiveChildren: false,
-		isRenderGroup: true,
 		sortableChildren: false,
 	});
 
@@ -60,7 +59,7 @@ export default class Storyboard extends ScopedClass {
 	constructor(private blob: Blob) {
 		super();
 
-		const mask = new Graphics()
+		this._mask = new Graphics()
 			.rect(-106.666666667, 0, 853.333333333, 480)
 			.fill({
 				color: 0x0,
@@ -75,7 +74,7 @@ export default class Storyboard extends ScopedClass {
 			});
 
 		this.container.addChild(
-			mask,
+			this._mask,
 			this.fill,
 			this.backgroundLayer,
 			this.foregroundLayer,
@@ -88,7 +87,7 @@ export default class Storyboard extends ScopedClass {
 			853.333333333,
 			480,
 		);
-		this.container.mask = mask;
+		this.container.mask = this._mask;
 
 		inject<BackgroundConfig>("config/background")?.onChange(
 			"storyboard",
@@ -119,7 +118,7 @@ export default class Storyboard extends ScopedClass {
 
 				textureMap.set(key.toLowerCase(), texture);
 			} catch {
-				console.log(`Cannot load resource with name: ${key}`);
+				console.warn(`Cannot load resource with name: ${key}`);
 			}
 		});
 
@@ -393,9 +392,12 @@ export default class Storyboard extends ScopedClass {
 			sprite.destroy();
 		}
 
+		// Don't pass true — children already destroyed by the loops above
 		this.foregroundLayer.destroy();
 		this.backgroundLayer.destroy();
 		this.overlayLayer.destroy();
+		this.fill.destroy();
+		this._mask.destroy();
 		this.container.destroy();
 	}
 }

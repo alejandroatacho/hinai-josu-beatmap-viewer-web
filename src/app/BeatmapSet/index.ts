@@ -2,7 +2,7 @@ import { Tween } from "@tweenjs/tween.js";
 import type { DifficultyPoint, SamplePoint, TimingPoint } from "osu-classes";
 import { Assets, type FederatedWheelEvent } from "pixi.js";
 import * as Tone from "tone";
-import { Context } from "tone";
+import { getContext } from "tone";
 import Audio from "@/Audio";
 import type AudioConfig from "@/Config/AudioConfig";
 import type BackgroundConfig from "@/Config/BackgroundConfig";
@@ -38,8 +38,7 @@ import SampleManager from "./SampleManager";
 
 export default class BeatmapSet extends ScopedClass {
 	difficulties: Beatmap[] = [];
-	audioContext: AudioContext | Context =
-		"userAgentData" in navigator ? new AudioContext() : new Context();
+	audioContext = getContext();
 	animationFrame: number;
 	playbackRate = 1;
 
@@ -93,8 +92,6 @@ export default class BeatmapSet extends ScopedClass {
 			new Skin(this.context.consume<Map<string, Resource>>("resources")),
 		);
 		await skin.init();
-
-		console.log(skin);
 	}
 
 	async loadResources() {
@@ -229,6 +226,8 @@ export default class BeatmapSet extends ScopedClass {
 		inject<Loading>("ui/loading")?.setText("Loading audio");
 		inject<Spectrogram>("ui/sidepanel/modding/spectrogram")?.unloadTexture();
 
+		this.context.consume<Audio>("audio")?.destroy();
+
 		const audio = this.context.provide(
 			"audio",
 			new Audio(this.audioContext).hook(this.context),
@@ -300,6 +299,8 @@ export default class BeatmapSet extends ScopedClass {
 
 		document.body.style.backgroundImage = `url("${url}")`;
 		await loadColorPalette(url);
+
+		URL.revokeObjectURL(url);
 	}
 
 	async loadStoryboard() {
@@ -417,9 +418,10 @@ export default class BeatmapSet extends ScopedClass {
 		}
 
 		const graph = inject<DifficultyGraph>("ui/sidepanel/modding/difficulty");
+		const audio = this.context.consume<Audio>("audio");
 
 		if (graph) {
-			graph.data = beatmap.strains;
+			graph.setData(beatmap.strains, (audio?.duration ?? 0) / 1000);
 		}
 
 		inject<Timeline>("ui/main/viewer/timeline")?.loadObjects(
@@ -684,15 +686,15 @@ export default class BeatmapSet extends ScopedClass {
 			audio?.toggle();
 		}
 
+		audio?.destroy();
+
 		inject<Timeline>("ui/main/viewer/timeline")?.loadObjects([]);
 		inject<Background>("ui/main/viewer/background")?.ejectStoryboardContainer();
 
 		this.context.consume<Storyboard>("storyboard")?.destroy();
 
-		this.master?.destroy();
-
-		for (const slave of this.slaves) {
-			slave.destroy();
+		for (const diff of this.difficulties) {
+			diff.destroy();
 		}
 
 		this.context.consume<Video>("video")?.destroy();
