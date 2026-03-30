@@ -26,11 +26,9 @@ export default class MirrorConfig extends ConfigSection {
 
 		if (!defaultOptions) return;
 
-		const { mirror } = defaultOptions;
-		this.mirror = mirror ?? {
-			name: "Nerinyan",
-			urlTemplate: "https://api.nerinyan.moe/v2/d/$setId",
-		};
+		if (defaultOptions.mirror !== undefined) {
+			this.mirror = defaultOptions.mirror;
+		}
 	}
 
 	private _mirror = {

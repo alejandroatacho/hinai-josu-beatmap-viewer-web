@@ -26,6 +26,7 @@ export default class SkinManager {
 			await this.indexed.remove("default");
 			await this.indexed.remove("yugen");
 			await this.indexed.remove("argon");
+			if (CUSTOM_DEFAULT_SKIN) await this.indexed.remove("hinamizawa");
 
 			await this.loadDefaultSkins();
 			await this.refreshSkinList();

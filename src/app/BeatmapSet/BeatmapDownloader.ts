@@ -107,21 +107,29 @@ async function fetchBundleFromHinai(
 	}
 }
 
-// Prefetched audio promise — starts loading in parallel with bundle download.
+// Prefetched audio promises — keyed by beatmapset ID to prevent cross-map races.
 // Consumed by BeatmapSet.loadAudio() when audio isn't in the extracted resources.
-let _prefetchedAudio: Promise<Blob | null> | null = null;
+const _prefetchedAudio = new Map<string, Promise<Blob | null>>();
 
 function prefetchAudio(beatmapsetId: string | number) {
-	_prefetchedAudio = fetch(`${HINAI_MIRROR_BASE}/api/v2/josu/audio/${beatmapsetId}`)
-		.then(r => r.ok ? r.blob() : null)
-		.catch(() => null);
+	const key = String(beatmapsetId);
+	_prefetchedAudio.set(
+		key,
+		fetch(`${HINAI_MIRROR_BASE}/api/v2/josu/audio/${beatmapsetId}`)
+			.then((r) => (r.ok ? r.blob() : null))
+			.catch(() => null),
+	);
 }
 
-/** Get prefetched audio blob (if available). Clears after consumption. */
-export async function consumePrefetchedAudio(): Promise<Blob | null> {
-	if (!_prefetchedAudio) return null;
-	const result = await _prefetchedAudio;
-	_prefetchedAudio = null;
+/** Get prefetched audio blob for a specific beatmapset. Clears entry after consumption. */
+export async function consumePrefetchedAudio(
+	beatmapsetId: string | number,
+): Promise<Blob | null> {
+	const key = String(beatmapsetId);
+	const promise = _prefetchedAudio.get(key);
+	if (!promise) return null;
+	const result = await promise;
+	_prefetchedAudio.delete(key);
 	return result;
 }
 
@@ -175,9 +183,13 @@ export async function getBeatmapFromId(
 	// Resolve beatmapset ID via Hinai (DuckDB ~3ms) or try-z.net (external ~350ms)
 	let beatmapsetId: string | number | null = beatmapSetId ?? null;
 	if (!beatmapsetId) {
-		beatmapsetId = useHinai
-			? await getBeatmapsetIdFromHinai(beatmapId)
-			: await getBeatmapsetId(beatmapId);
+		if (useHinai) {
+			beatmapsetId = await getBeatmapsetIdFromHinai(beatmapId);
+			// Fall back to try-z.net if Hinai resolver misses (e.g. map not yet crawled)
+			if (!beatmapsetId) beatmapsetId = await getBeatmapsetId(beatmapId);
+		} else {
+			beatmapsetId = await getBeatmapsetId(beatmapId);
+		}
 	}
 
 	if (!beatmapsetId)

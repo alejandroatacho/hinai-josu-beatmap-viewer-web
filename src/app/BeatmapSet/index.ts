@@ -197,12 +197,13 @@ export default class BeatmapSet extends ScopedClass {
 
 		// If audio not in resources (Hinai bundle = .osu only), use prefetched or fetch full audio
 		if (!audioFile) {
+			const setId = beatmap.data.metadata.beatmapSetId;
+
 			// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
-			audioFile = await consumePrefetchedAudio() ?? undefined;
+			if (setId) audioFile = await consumePrefetchedAudio(setId) ?? undefined;
 
 			// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
 			if (!audioFile) {
-				const setId = beatmap.data.metadata.beatmapSetId;
 				if (setId) {
 					inject<Loading>("ui/loading")?.setText("Loading audio...");
 					try {

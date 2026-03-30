@@ -15,9 +15,28 @@ export const CUSTOM_DEFAULT_SKIN = import.meta.env.VITE_CUSTOM_DEFAULT_SKIN === 
 // ──────────────────────────────────────────────────────────────────────────────
 export const HINAI_ENVIRONMENT = import.meta.env.VITE_HINAI_ENVIRONMENT === "true";
 
-export async function getHinamizawaSkin() {
-	const defaults = [...Array(10)].map((_, idx) => `default-${idx}.png`);
-	const hitSounds = ["drum", "normal"].map((hitSample) =>
+// Shared helper — fetches skin files and returns a resource map.
+// Silently skips files that fail to load (e.g. missing assets).
+async function loadSkinResources(
+	skinPath: string,
+	filenames: string[],
+): Promise<Map<string, Resource>> {
+	const resources = new Map<string, Resource>();
+	await Promise.all(
+		filenames.map(async (filename) => {
+			try {
+				const data = await ky.get<Blob>(`${skinPath}${filename}`).blob();
+				resources.set(filename, data);
+			} catch {
+				return;
+			}
+		}),
+	);
+	return resources;
+}
+
+function buildHitSounds(samples: string[]) {
+	return samples.flatMap((hitSample) =>
 		[
 			"hitclap",
 			"hitfinish",
@@ -28,14 +47,14 @@ export async function getHinamizawaSkin() {
 			"sliderwhistle",
 		].map((hitSound) => `${hitSample}-${hitSound}.wav`),
 	);
+}
 
-	const filenames = [
+export async function getHinamizawaSkin() {
+	const defaults = [...Array(10)].map((_, idx) => `default-${idx}.png`);
+	return loadSkinResources("./skinning/hinamizawa/", [
 		"approachcircle.png",
 		...defaults,
-		...hitSounds.reduce((accm, curr) => {
-			accm.push(...curr);
-			return accm;
-		}, []),
+		...buildHitSounds(["drum", "normal"]),
 		"cursor.png",
 		"cursortrail.png",
 		"followpoint.png",
@@ -62,43 +81,14 @@ export async function getHinamizawaSkin() {
 		"spinner-top.png",
 		"spinner-glow.png",
 		"combobreak.wav",
-	];
-
-	const resources = new Map<string, Resource>();
-	await Promise.all(
-		filenames.map(async (filename) => {
-			try {
-				const data = await ky.get<Blob>(`./skinning/hinamizawa/${filename}`).blob();
-				resources.set(filename, data);
-			} catch {
-				return;
-			}
-		}),
-	);
-
-	return resources;
+	]);
 }
 
 export async function getArgon() {
 	const defaults = [...Array(10)].map((_, idx) => `default-${idx}@2x.png`);
-	const hitSounds = ["drum", "normal", "soft"].map((hitSample) =>
-		[
-			"hitclap",
-			"hitfinish",
-			"hitnormal",
-			"hitwhistle",
-			"sliderslide",
-			"slidertick",
-			"sliderwhistle",
-		].map((hitSound) => `${hitSample}-${hitSound}.wav`),
-	);
-
-	const filenames = [
+	return loadSkinResources("./skinning/argon/", [
 		...defaults,
-		...hitSounds.reduce((accm, curr) => {
-			accm.push(...curr);
-			return accm;
-		}, []),
+		...buildHitSounds(["drum", "normal", "soft"]),
 		"followpoint.png",
 		"timelinehitcircle@2x.png",
 		"hit300@2x.png",
@@ -121,44 +111,15 @@ export async function getArgon() {
 		"spinner-approachcircle@2x.png",
 		"spinner-bottom@2x.png",
 		"skin.ini",
-	];
-
-	const resources = new Map<string, Resource>();
-	await Promise.all(
-		filenames.map(async (filename) => {
-			try {
-				const data = await ky.get<Blob>(`./skinning/argon/${filename}`).blob();
-				resources.set(filename, data);
-			} catch {
-				return;
-			}
-		}),
-	);
-
-	return resources;
+	]);
 }
 
 export async function getDefaultLegacy() {
 	const defaults = [...Array(10)].map((_, idx) => `default-${idx}@2x.png`);
-	const hitSounds = ["drum", "normal", "soft"].map((hitSample) =>
-		[
-			"hitclap",
-			"hitfinish",
-			"hitnormal",
-			"hitwhistle",
-			"sliderslide",
-			"slidertick",
-			"sliderwhistle",
-		].map((hitSound) => `${hitSample}-${hitSound}.wav`),
-	);
-
-	const filenames = [
+	return loadSkinResources("./skinning/legacy/", [
 		"approachcircle@2x.png",
 		...defaults,
-		...hitSounds.reduce((accm, curr) => {
-			accm.push(...curr);
-			return accm;
-		}, []),
+		...buildHitSounds(["drum", "normal", "soft"]),
 		"cursor@2x.png",
 		"cursortrail.png",
 		"followpoint@2x.png",
@@ -187,46 +148,17 @@ export async function getDefaultLegacy() {
 		"sliderscorepoint@2x.png",
 		"spinner-approachcircle@2x.png",
 		"spinner-bottom@2x.png",
-	];
-
-	const resources = new Map<string, Resource>();
-	await Promise.all(
-		filenames.map(async (filename) => {
-			try {
-				const data = await ky.get<Blob>(`./skinning/legacy/${filename}`).blob();
-				resources.set(filename, data);
-			} catch {
-				return;
-			}
-		}),
-	);
-
-	return resources;
+	]);
 }
 
 export async function getYugen() {
 	const defaults = [...Array(10)].map((_, idx) => `default-${idx}@2x.png`);
-	const hitSounds = ["drum", "normal", "soft"].map((hitSample) =>
-		[
-			"hitclap",
-			"hitfinish",
-			"hitnormal",
-			"hitwhistle",
-			"sliderslide",
-			"slidertick",
-			"sliderwhistle",
-		].map((hitSound) => `${hitSample}-${hitSound}.wav`),
-	);
-
-	const filenames = [
+	return loadSkinResources("./skinning/yugen/", [
 		"approachcircle.png",
 		"cursor@2x.png",
 		"cursortrail.png",
 		...defaults,
-		...hitSounds.reduce((accm, curr) => {
-			accm.push(...curr);
-			return accm;
-		}, []),
+		...buildHitSounds(["drum", "normal", "soft"]),
 		"followpoint@2x.png",
 		"followpoint-0.png",
 		"followpoint-1.png",
@@ -244,19 +176,5 @@ export async function getYugen() {
 		"sliderscorepoint.png",
 		"spinner-approachcircle@2x.png",
 		"spinner-bottom@2x.png",
-	];
-
-	const resources = new Map<string, Resource>();
-	await Promise.all(
-		filenames.map(async (filename) => {
-			try {
-				const data = await ky.get<Blob>(`./skinning/yugen/${filename}`).blob();
-				resources.set(filename, data);
-			} catch {
-				return;
-			}
-		}),
-	);
-
-	return resources;
+	]);
 }

@@ -6,11 +6,21 @@ import { inject, provide } from "./Context";
 import { Game } from "./Game";
 import { HINAI_ENVIRONMENT } from "./Initiator";
 
+let _loadingDiff = false;
+
 document.addEventListener("keydown", (event) => {
 	const bms = inject<BeatmapSet>("beatmapset");
 	const audio = bms?.context.consume<Audio>("audio");
 
 	if (!bms || !audio) return;
+
+	// Skip game shortcuts when focus is in an editable element
+	const activeEl = document.activeElement;
+	const isEditable =
+		activeEl?.tagName === "INPUT" ||
+		activeEl?.tagName === "TEXTAREA" ||
+		activeEl?.getAttribute("contenteditable") === "true";
+	if (isEditable) return;
 
 	const key = event.key;
 
@@ -55,24 +65,22 @@ document.addEventListener("keydown", (event) => {
 	}
 
 	if (isToggle) {
-		const activeElement = document.activeElement;
-		if (
-			activeElement?.tagName === "INPUT" &&
-			activeElement?.getAttribute("type") === "text"
-		)
-			return;
 		event.preventDefault();
 		bms.toggle();
 		return;
 	}
 
 	if (isDiffPrev || isDiffNext) {
+		if (_loadingDiff) return;
 		if (!bms.master || bms.difficulties.length <= 1) return;
 		const currentIdx = bms.difficulties.indexOf(bms.master);
 		const nextIdx = isDiffNext
 			? (currentIdx + 1) % bms.difficulties.length
 			: (currentIdx - 1 + bms.difficulties.length) % bms.difficulties.length;
-		bms.loadMaster(nextIdx);
+		_loadingDiff = true;
+		bms.loadMaster(nextIdx).finally(() => {
+			_loadingDiff = false;
+		});
 		return;
 	}
 

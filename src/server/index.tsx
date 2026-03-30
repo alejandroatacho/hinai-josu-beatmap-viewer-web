@@ -4,6 +4,15 @@ import axios from "axios";
 import { Elysia, t } from "elysia";
 import download from "./download";
 
+function escapeHtml(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
 const isProduction = process.env.NODE_ENV === "production";
 const htmlTemplate = isProduction
 	? await Bun.file("dist/index.html").text()
@@ -35,13 +44,14 @@ app
 					try {
 						const { data: beatmapData } = await axios.get(
 							`https://api.try-z.net/b/${beatmapId[0]}`,
+							{ timeout: 3000 },
 						);
 						const data = {
-							artist: beatmapData.beatmapset.artist,
-							title: beatmapData.beatmapset.title,
-							cover: beatmapData.beatmapset.covers["card@2x"],
-							creator: beatmapData.beatmapset.creator,
-							difficulty: beatmapData.version,
+							artist: escapeHtml(beatmapData.beatmapset.artist ?? ""),
+							title: escapeHtml(beatmapData.beatmapset.title ?? ""),
+							cover: encodeURI(beatmapData.beatmapset.covers["card@2x"] ?? ""),
+							creator: escapeHtml(beatmapData.beatmapset.creator ?? ""),
+							difficulty: escapeHtml(beatmapData.version ?? ""),
 						};
 						metaTags = `
 							<meta property="og:title" content="${data.artist} - ${data.title} | JoSu! - osu! Beatmap Viewer" />
@@ -68,7 +78,7 @@ app
 				}
 
 				const commonMeta = `
-					<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+					<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 					<link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css" rel="stylesheet" />
 					<meta property="og:site_name" content="JoSu! | osu! Beatmap Viewer" />
 					<meta property="og:type" content="website" />
@@ -77,8 +87,10 @@ app
 					${metaTags}
 				`;
 
-				// Inject meta tags into the HTML template
-				const html = `<!DOCTYPE html><html lang="en"><head>${commonMeta}</head>${htmlTemplate}</html>`;
+				// Inject meta tags into the existing built HTML template
+				const html = htmlTemplate.includes("</head>")
+					? htmlTemplate.replace("</head>", `${commonMeta}</head>`)
+					: `<!DOCTYPE html><html lang="en"><head>${commonMeta}</head>${htmlTemplate}</html>`;
 
 				set.headers["content-type"] = "text/html";
 				return html;
