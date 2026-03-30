@@ -185,8 +185,7 @@ export async function getBeatmapFromId(
 	if (!beatmapsetId) {
 		if (useHinai) {
 			beatmapsetId = await getBeatmapsetIdFromHinai(beatmapId);
-			// TODO: re-enable try-z.net fallback once Hinai resolve 404s are investigated
-			// if (!beatmapsetId) beatmapsetId = await getBeatmapsetId(beatmapId);
+			if (!beatmapsetId) beatmapsetId = await getBeatmapsetId(beatmapId);
 		} else {
 			beatmapsetId = await getBeatmapsetId(beatmapId);
 		}
