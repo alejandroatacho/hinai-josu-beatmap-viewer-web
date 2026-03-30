@@ -38,7 +38,7 @@ document.addEventListener("keydown", (event) => {
 	// Default: Space
 	// Hinai:   P (+ Space still works)
 	const isToggle = HINAI_ENVIRONMENT
-		? key === "p" || key === "P" || key === " "
+		? ((key === "p" || key === "P") && !event.ctrlKey && !event.metaKey && !event.altKey) || key === " "
 		: key === " ";
 
 	// --- Switch difficulty (Hinai only) ---

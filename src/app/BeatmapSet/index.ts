@@ -28,6 +28,8 @@ import extraMode from "/assets/extra-mode.svg?raw";
 import { inject, provide, ScopedClass } from "../Context";
 import type { Resource } from "../ZipHandler";
 import { consumePrefetchedAudio } from "./BeatmapDownloader";
+import type MirrorConfig from "../Config/MirrorConfig";
+import { isHinaiMirror } from "../Config/MirrorConfig";
 import Beatmap from "./Beatmap";
 import type DrawableHitCircle from "./Beatmap/HitObjects/DrawableHitCircle";
 import type DrawableSlider from "./Beatmap/HitObjects/DrawableSlider";
@@ -197,14 +199,16 @@ export default class BeatmapSet extends ScopedClass {
 
 		// If audio not in resources (Hinai bundle = .osu only), use prefetched or fetch full audio
 		if (!audioFile) {
+			const mirrorConfig = inject<MirrorConfig>("config/mirror");
+			const useHinai = mirrorConfig && isHinaiMirror(mirrorConfig.mirror);
 			const setId = beatmap.data.metadata.beatmapSetId;
 
-			// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
-			if (setId) audioFile = await consumePrefetchedAudio(setId) ?? undefined;
+			if (useHinai && setId) {
+				// 1. Check prefetched audio (started in parallel with bundle download — zero wait)
+				audioFile = await consumePrefetchedAudio(setId) ?? undefined;
 
-			// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
-			if (!audioFile) {
-				if (setId) {
+				// 2. Fetch full-length audio from Hinai (local cache ~5ms, or .osz extraction)
+				if (!audioFile) {
 					inject<Loading>("ui/loading")?.setText("Loading audio...");
 					try {
 						const resp = await fetch(`https://mirror.hinamizawa.ai/api/v2/josu/audio/${setId}`);

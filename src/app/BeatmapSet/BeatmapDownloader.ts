@@ -202,7 +202,8 @@ export async function getBeatmapFromId(
 		prefetchAudio(beatmapsetId); // fires immediately, consumed by loadAudio()
 		const bundle = await fetchBundleFromHinai(beatmapsetId);
 		if (bundle) return bundle;
-		// Fall through to full .osz if bundle fails
+		// Bundle failed — clean up orphaned prefetch before falling through to full .osz
+		_prefetchedAudio.delete(String(beatmapsetId));
 	}
 
 	return await fetchBlobFromMirror(beatmapsetId);
