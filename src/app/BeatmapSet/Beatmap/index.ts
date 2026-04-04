@@ -629,10 +629,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	toggle() {
-		if (!this.loaded)
-			throw new Error(
-				"Cannot play / pause a beatmap that hasn't been initialized",
-			);
+		if (!this.loaded) return;
 
 		const audio = this.context.consume<Audio>("audio");
 
@@ -652,10 +649,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	seek(time: number) {
-		if (!this.loaded)
-			throw new Error(
-				"Cannot play / pause a beatmap that hasn't been initialized",
-			);
+		if (!this.loaded) return;
 
 		this.worker.postMessage({ type: "seek", time });
 	}

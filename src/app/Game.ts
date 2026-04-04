@@ -19,6 +19,7 @@ import Config from "./Config";
 import type FullscreenConfig from "./Config/FullscreenConfig";
 import type RendererConfig from "./Config/RendererConfig";
 import { inject, provide } from "./Context";
+import { STORYBOARD_ONLY } from "./Initiator";
 import ResponsiveHandler from "./ResponsiveHandler";
 import SkinManager from "./Skinning/SkinManager";
 import Loading from "./UI/loading";
@@ -467,6 +468,20 @@ export class Game {
 		const IDs = queries.length !== 0 ? queries : [];
 
 		const replay = searchParams.get("r");
+
+		// Support ?s= for beatmapset ID (used by storyboard gallery embed)
+		const setId = searchParams.get("s");
+		if (setId) {
+			await this.loadSetID(setId);
+			// In storyboard-only mode, auto-select first diff
+			const bms = inject<BeatmapSet>("beatmapset");
+			if (bms && !bms.master && bms.difficulties.length > 0) {
+				await bms.loadMaster(0);
+			}
+			// Notify parent iframe
+			try { window.parent.postMessage({ type: "LOADED", beatmapsetId: +setId }, "*"); } catch {}
+			return true;
+		}
 
 		if (IDs.length === 0 && !replay) {
 			inject<Loading>("ui/loading")?.off();

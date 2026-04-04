@@ -23,6 +23,7 @@ import type DifficultyGraph from "@/UI/sidepanel/Modding/DifficultyGraph";
 import type Spectrogram from "@/UI/sidepanel/Modding/Spectrogram";
 import type Timing from "@/UI/sidepanel/Timing";
 import { getDiffColour, loadColorPalette } from "@/utils";
+import { STORYBOARD_ONLY } from "@/Initiator";
 import Video from "@/Video";
 import extraMode from "/assets/extra-mode.svg?raw";
 import { inject, provide, ScopedClass } from "../Context";
@@ -373,6 +374,11 @@ export default class BeatmapSet extends ScopedClass {
 	}
 
 	async loadBeatmap(beatmap: Beatmap, index?: number) {
+		if (STORYBOARD_ONLY) {
+			// Storyboard-only: skip gameplay init entirely — storyboard renders from audio time
+			return;
+		}
+
 		inject<Loading>("ui/loading")?.setText("Loading hitObjects");
 
 		inject<Gameplays>("ui/main/viewer/gameplays")?.addGameplay(
@@ -387,8 +393,6 @@ export default class BeatmapSet extends ScopedClass {
 
 		beatmap.seek(this.context.consume<Audio>("audio")?.currentTime ?? 0);
 		beatmap.toggle();
-
-		// console.log(beatmap);
 	}
 
 	async loadMaster(idx: number) {
@@ -417,16 +421,18 @@ export default class BeatmapSet extends ScopedClass {
 			]);
 		}
 
-		const graph = inject<DifficultyGraph>("ui/sidepanel/modding/difficulty");
-		const audio = this.context.consume<Audio>("audio");
+		if (!STORYBOARD_ONLY) {
+			const graph = inject<DifficultyGraph>("ui/sidepanel/modding/difficulty");
+			const audio = this.context.consume<Audio>("audio");
 
-		if (graph) {
-			graph.setData(beatmap.strains, (audio?.duration ?? 0) / 1000);
+			if (graph) {
+				graph.setData(beatmap.strains, (audio?.duration ?? 0) / 1000);
+			}
+
+			inject<Timeline>("ui/main/viewer/timeline")?.loadObjects(
+				beatmap.objects as (DrawableHitCircle | DrawableSlider)[],
+			);
 		}
-
-		inject<Timeline>("ui/main/viewer/timeline")?.loadObjects(
-			beatmap.objects as (DrawableHitCircle | DrawableSlider)[],
-		);
 
 		this.master = beatmap;
 

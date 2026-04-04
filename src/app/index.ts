@@ -4,7 +4,7 @@ import type Audio from "./Audio";
 import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
-import { HINAI_ENVIRONMENT } from "./Initiator";
+import { HINAI_ENVIRONMENT, STORYBOARD_ONLY } from "./Initiator";
 
 let _loadingDiff = false;
 
@@ -163,6 +163,40 @@ document.body.addEventListener("click", (e) => {
 	}
 });
 
+// ── Storyboard-only mode: hide unnecessary DOM elements ──
+if (STORYBOARD_ONLY) {
+	document.querySelector("#topBar")?.classList.add("hidden");
+	document.querySelector("#settings")?.classList.add("hidden");
+	document.querySelector("#splash")?.classList.add("hidden");
+	document.querySelector("#diffsContainerWrapper")?.classList.add("hidden");
+	document.body.style.background = "black";
+}
+
+// ── postMessage API for iframe embedding ──
+const ALLOWED_ORIGINS = ["https://hinamizawa.ai", "https://stg.hinamizawa.ai", "http://localhost:5157", "http://localhost:3000"];
+
+window.addEventListener("message", (event) => {
+	if (!ALLOWED_ORIGINS.some((o) => event.origin === o || event.origin === window.location.origin)) return;
+
+	const data = event.data;
+	if (!data || typeof data.type !== "string") return;
+
+	const bms = inject<BeatmapSet>("beatmapset");
+
+	switch (data.type) {
+		case "PLAY":
+			if (bms && bms.context.consume<Audio>("audio")?.state !== "PLAYING") bms.toggle();
+			break;
+		case "PAUSE":
+			if (bms && bms.context.consume<Audio>("audio")?.state === "PLAYING") bms.toggle();
+			break;
+		case "CLOSE":
+			bms?.destroy();
+			try { window.parent.postMessage({ type: "CLOSED" }, "*"); } catch {}
+			break;
+	}
+});
+
 (async () => {
 	try {
 		await navigator.wakeLock.request("screen");
@@ -182,4 +216,7 @@ document.body.addEventListener("click", (e) => {
 
 	const game = provide("game", new Game());
 	await game.init();
+
+	// Notify parent iframe that josu is ready
+	try { window.parent.postMessage({ type: "READY" }, "*"); } catch {}
 })();

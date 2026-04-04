@@ -15,6 +15,13 @@ export const CUSTOM_DEFAULT_SKIN = import.meta.env.VITE_CUSTOM_DEFAULT_SKIN === 
 // ──────────────────────────────────────────────────────────────────────────────
 export const HINAI_ENVIRONMENT = import.meta.env.VITE_HINAI_ENVIRONMENT === "true";
 
+// ──────────────────────────────────────────────────────────────────────────────
+// STORYBOARD-ONLY MODE — When URL has ?storyboard-only=true, skip gameplay
+// rendering (hit circles, sliders, spinners) and show only the storyboard +
+// background + audio + controls. Used by the storyboard gallery embed.
+// ──────────────────────────────────────────────────────────────────────────────
+export const STORYBOARD_ONLY = new URLSearchParams(window.location.search).get("storyboard-only") === "true";
+
 // Shared helper — fetches skin files and returns a resource map.
 // Silently skips files that fail to load (e.g. missing assets).
 async function loadSkinResources(

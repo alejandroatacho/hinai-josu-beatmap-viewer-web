@@ -197,7 +197,10 @@ export async function getBeatmapFromId(
 		);
 
 	// Hinai: start audio prefetch in parallel, then download lightweight bundle
-	if (useHinai) {
+	// In storyboard-only mode, skip the stripped bundle — storyboards need sprite
+	// images from the full .osz archive, not just .osu files
+	const storyboardOnly = new URLSearchParams(window.location.search).get("storyboard-only") === "true";
+	if (useHinai && !storyboardOnly) {
 		prefetchAudio(beatmapsetId); // fires immediately, consumed by loadAudio()
 		const bundle = await fetchBundleFromHinai(beatmapsetId);
 		if (bundle) return bundle;
