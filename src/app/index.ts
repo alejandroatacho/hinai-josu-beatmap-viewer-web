@@ -183,13 +183,14 @@ window.addEventListener("message", (event) => {
 	if (!data || typeof data.type !== "string") return;
 
 	const bms = inject<BeatmapSet>("beatmapset");
+	const audio = bms?.context.consume<Audio>("audio");
 
 	switch (data.type) {
 		case "PLAY":
-			if (bms && bms.context.consume<Audio>("audio")?.state !== "PLAYING") bms.toggle();
+			if (bms && audio && audio.state !== "PLAYING") bms.toggle();
 			break;
 		case "PAUSE":
-			if (bms && bms.context.consume<Audio>("audio")?.state === "PLAYING") bms.toggle();
+			if (bms && audio && audio.state === "PLAYING") bms.toggle();
 			break;
 		case "CLOSE":
 			bms?.destroy();

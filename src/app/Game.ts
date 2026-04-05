@@ -473,8 +473,7 @@ export class Game {
 		// Support ?s= for beatmapset ID (used by storyboard gallery embed)
 		const setId = searchParams.get("s");
 		if (setId) {
-			const numericId = Number(setId);
-			if (!Number.isFinite(numericId) || numericId <= 0) {
+			if (!/^\d+$/.test(setId) || +setId <= 0) {
 				postToParent({ type: "ERROR", message: `Invalid beatmapset ID: ${setId}` });
 				return true;
 			}
@@ -490,7 +489,7 @@ export class Game {
 				if (STORYBOARD_ONLY && !bms.master && bms.difficulties.length > 0) {
 					await bms.loadMaster(0);
 				}
-				postToParent({ type: "LOADED", beatmapsetId: numericId });
+				postToParent({ type: "LOADED", beatmapsetId: +setId });
 			} catch (err) {
 				postToParent({ type: "ERROR", message: String(err) });
 			}
@@ -613,7 +612,7 @@ export class Game {
 				bms = await this.loadBlob(blob);
 			}
 
-			if (!bms.master) {
+			if (!bms.master && !STORYBOARD_ONLY) {
 				document
 					.querySelector<HTMLDivElement>("#diffsContainerWrapper")
 					?.classList.remove("hidden");
