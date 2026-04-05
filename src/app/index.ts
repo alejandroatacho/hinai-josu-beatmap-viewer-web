@@ -173,10 +173,25 @@ if (STORYBOARD_ONLY) {
 }
 
 // ── postMessage API for iframe embedding ──
-const ALLOWED_ORIGINS = ["https://hinamizawa.ai", "https://stg.hinamizawa.ai", "http://localhost:5157", "http://localhost:3000"];
+const ALLOWED_ORIGINS = new Set([
+	"https://hinamizawa.ai", "https://stg.hinamizawa.ai",
+	"http://localhost:5157", "http://localhost:3000",
+	window.location.origin,
+]);
+
+function postToParent(message: Record<string, unknown>, targetOrigin?: string) {
+	if (targetOrigin) {
+		try { window.parent.postMessage(message, targetOrigin); } catch {}
+		return;
+	}
+	for (const origin of ALLOWED_ORIGINS) {
+		if (origin === window.location.origin) continue;
+		try { window.parent.postMessage(message, origin); } catch {}
+	}
+}
 
 window.addEventListener("message", (event) => {
-	if (!ALLOWED_ORIGINS.some((o) => event.origin === o || event.origin === window.location.origin)) return;
+	if (!ALLOWED_ORIGINS.has(event.origin)) return;
 
 	const data = event.data;
 	if (!data || typeof data.type !== "string") return;
@@ -192,7 +207,7 @@ window.addEventListener("message", (event) => {
 			break;
 		case "CLOSE":
 			bms?.destroy();
-			try { window.parent.postMessage({ type: "CLOSED" }, "*"); } catch {}
+			postToParent({ type: "CLOSED" }, event.origin);
 			break;
 	}
 });
@@ -218,5 +233,5 @@ window.addEventListener("message", (event) => {
 	await game.init();
 
 	// Notify parent iframe that josu is ready
-	try { window.parent.postMessage({ type: "READY" }, "*"); } catch {}
+	postToParent({ type: "READY" });
 })();

@@ -625,7 +625,7 @@ export default class DrawableSlider
 		this._cachedTail = tail;
 		this._cachedScale = scale;
 
-		const path = calculateSliderProgress(this.object.path, head, tail);
+		const path = calculateSliderProgress(this.object.path, head, tail, this.path.points);
 		this.path = path;
 
 		const { positions, indices } = createGeometry(

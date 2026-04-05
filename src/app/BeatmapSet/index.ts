@@ -467,9 +467,9 @@ export default class BeatmapSet extends ScopedClass {
 		const audio = this.context.consume<Audio>("audio");
 		audio?.toggle();
 
-		this.master?.toggle();
+		if (this.master?.isLoaded) this.master.toggle();
 		for (const slave of this.slaves) {
-			slave.toggle();
+			if (slave.isLoaded) slave.toggle();
 		}
 
 		if (
@@ -509,9 +509,9 @@ export default class BeatmapSet extends ScopedClass {
 
 		audio.currentTime = time;
 
-		this.master?.seek(audio.currentTime);
+		if (this.master?.isLoaded) this.master.seek(audio.currentTime);
 		for (const slave of this.slaves) {
-			slave.seek(audio.currentTime);
+			if (slave.isLoaded) slave.seek(audio.currentTime);
 		}
 
 		this.context.consume<Video>("video")?.seek(audio.currentTime);

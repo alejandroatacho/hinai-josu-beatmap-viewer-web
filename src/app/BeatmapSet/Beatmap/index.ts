@@ -52,7 +52,8 @@ export default class Beatmap extends ScopedClass {
 
 	private worker = new ObjectsWorker();
 
-	private loaded = false;
+	private _loaded = false;
+	get isLoaded() { return this._loaded; }
 
 	private previousConnectors = new Set<number>();
 	previousObjects = new Set<number>();
@@ -309,7 +310,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	load() {
-		this.loaded = true;
+		this._loaded = true;
 
 		if (this.replay) {
 			this.hookReplay(this.replay);
@@ -581,7 +582,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	update(time: number, objects: Set<number>, connectors: Set<number>) {
-		if (!this.loaded) return;
+		if (!this._loaded) return;
 
 		if (
 			this.container.dragWindow[0].distance(this.container.dragWindow[1]) > 0
@@ -629,7 +630,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	toggle() {
-		if (!this.loaded) return;
+		if (!this._loaded) throw new Error("Cannot toggle a beatmap that hasn't been loaded");
 
 		const audio = this.context.consume<Audio>("audio");
 
@@ -649,7 +650,7 @@ export default class Beatmap extends ScopedClass {
 	}
 
 	seek(time: number) {
-		if (!this.loaded) return;
+		if (!this._loaded) throw new Error("Cannot seek a beatmap that hasn't been loaded");
 
 		this.worker.postMessage({ type: "seek", time });
 	}
@@ -699,7 +700,7 @@ export default class Beatmap extends ScopedClass {
 		);
 
 		this.worker.postMessage({ type: "destroy" });
-		this.loaded = false;
+		this._loaded = false;
 
 		this.container.objectsContainer.removeChildren();
 
