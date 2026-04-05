@@ -185,7 +185,7 @@ export function postToParent(message: Record<string, unknown>, targetOrigin?: st
 		return;
 	}
 	for (const origin of ALLOWED_ORIGINS) {
-		if (origin === window.location.origin) continue;
+		if (!origin) continue;
 		try { window.parent.postMessage(message, origin); } catch {}
 	}
 }

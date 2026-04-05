@@ -473,6 +473,11 @@ export class Game {
 		// Support ?s= for beatmapset ID (used by storyboard gallery embed)
 		const setId = searchParams.get("s");
 		if (setId) {
+			const numericId = Number(setId);
+			if (!Number.isFinite(numericId) || numericId <= 0) {
+				postToParent({ type: "ERROR", message: `Invalid beatmapset ID: ${setId}` });
+				return true;
+			}
 			try {
 				await this.loadSetID(setId);
 				// In storyboard-only mode, auto-select first diff
@@ -482,7 +487,7 @@ export class Game {
 						await bms.loadMaster(0);
 					}
 				}
-				postToParent({ type: "LOADED", beatmapsetId: +setId });
+				postToParent({ type: "LOADED", beatmapsetId: numericId });
 			} catch (err) {
 				postToParent({ type: "ERROR", message: String(err) });
 			}

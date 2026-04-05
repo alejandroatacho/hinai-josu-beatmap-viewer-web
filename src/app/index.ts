@@ -176,6 +176,8 @@ if (STORYBOARD_ONLY) {
 import { ALLOWED_ORIGINS, postToParent } from "./utils";
 
 window.addEventListener("message", (event) => {
+	if (window.parent === window) return;
+	if (event.source !== window.parent) return;
 	if (!ALLOWED_ORIGINS.has(event.origin)) return;
 
 	const data = event.data;
