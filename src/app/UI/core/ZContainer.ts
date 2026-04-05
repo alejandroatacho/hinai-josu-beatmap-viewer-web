@@ -1,6 +1,7 @@
 import {
 	LayoutContainer
 } from "@pixi/layout/components";
+import type { FillInput, StrokeInput } from "pixi.js";
 import AnimationController from "../animation/AnimationController";
 
 export default class ZContainer extends LayoutContainer {
