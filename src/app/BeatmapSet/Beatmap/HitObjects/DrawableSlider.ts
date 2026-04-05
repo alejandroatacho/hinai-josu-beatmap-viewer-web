@@ -356,7 +356,9 @@ export default class DrawableSlider
 
 	set object(val: Slider) {
 		this._object = val;
-		this.lastGeometryState = { head: Infinity, tail: -Infinity, scale: -Infinity };
+		this._cachedHead = -1;
+		this._cachedTail = -1;
+		this._cachedScale = -1;
 
 		this.nodes.clear();
 		for (let i = 0; i < val.path.controlPoints.length; i++) {
@@ -591,7 +593,10 @@ export default class DrawableSlider
 		);
 	}
 
-	lastGeometryState = { head: Infinity, tail: -Infinity, scale: -Infinity };
+	private _cachedHead = -1;
+	private _cachedTail = -1;
+	private _cachedScale = -1;
+
 	updateGeometry(progressHead = 0, progressTail = 0, scale = 1) {
 		const snakeIn = inject<GameplayConfig>("config/gameplay")?.snakeInSlider;
 		const snakeOut = inject<GameplayConfig>("config/gameplay")?.snakeOutSlider;
@@ -609,17 +614,18 @@ export default class DrawableSlider
 		head = (isReversing ? snakeIn : snakeOut) ? head : 0;
 		tail = (isReversing ? snakeOut : snakeIn) ? Math.abs(tail) : 1;
 
-		if (head === this.lastGeometryState.head &&
-			tail === this.lastGeometryState.tail &&
-			scale === this.lastGeometryState.scale) return;
+		if (
+			this._cachedHead === head &&
+			this._cachedTail === tail &&
+			this._cachedScale === scale
+		)
+			return;
 
-		this.lastGeometryState.head = head;
-		this.lastGeometryState.tail = tail;
-		this.lastGeometryState.scale = scale;
+		this._cachedHead = head;
+		this._cachedTail = tail;
+		this._cachedScale = scale;
 
 		const path = calculateSliderProgress(this.object.path, head, tail, this.path.points);
-		if (!path.length) return;
-
 		this.path = path;
 
 		const { positions, indices } = createGeometry(

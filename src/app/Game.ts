@@ -19,6 +19,8 @@ import Config from "./Config";
 import type FullscreenConfig from "./Config/FullscreenConfig";
 import type RendererConfig from "./Config/RendererConfig";
 import { inject, provide } from "./Context";
+import { STORYBOARD_ONLY } from "./Initiator";
+import { postToParent } from "./utils";
 import ResponsiveHandler from "./ResponsiveHandler";
 import SkinManager from "./Skinning/SkinManager";
 import Loading from "./UI/loading";
@@ -468,6 +470,32 @@ export class Game {
 
 		const replay = searchParams.get("r");
 
+		// Support ?s= for beatmapset ID (used by storyboard gallery embed)
+		const setId = searchParams.get("s");
+		if (setId) {
+			if (!/^\d+$/.test(setId) || +setId <= 0) {
+				postToParent({ type: "ERROR", message: `Invalid beatmapset ID: ${setId}` });
+				return true;
+			}
+			try {
+				await this.loadSetID(setId);
+				// Verify load actually succeeded (loadSetID swallows errors internally)
+				const bms = inject<BeatmapSet>("beatmapset");
+				if (!bms || bms.difficulties.length === 0) {
+					postToParent({ type: "ERROR", message: `Failed to load beatmapset ${setId}` });
+					return true;
+				}
+				// In storyboard-only mode, auto-select first diff
+				if (STORYBOARD_ONLY && !bms.master && bms.difficulties.length > 0) {
+					await bms.loadMaster(0);
+				}
+				postToParent({ type: "LOADED", beatmapsetId: +setId });
+			} catch (err) {
+				postToParent({ type: "ERROR", message: String(err) });
+			}
+			return true;
+		}
+
 		if (IDs.length === 0 && !replay) {
 			inject<Loading>("ui/loading")?.off();
 			return false;
@@ -584,7 +612,7 @@ export class Game {
 				bms = await this.loadBlob(blob);
 			}
 
-			if (!bms.master) {
+			if (!bms.master && !STORYBOARD_ONLY) {
 				document
 					.querySelector<HTMLDivElement>("#diffsContainerWrapper")
 					?.classList.remove("hidden");

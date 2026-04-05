@@ -4,7 +4,8 @@ import type Audio from "./Audio";
 import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
-import { HINAI_ENVIRONMENT } from "./Initiator";
+import { HINAI_ENVIRONMENT, STORYBOARD_ONLY } from "./Initiator";
+import { ALLOWED_ORIGINS, postToParent } from "./utils";
 
 let _loadingDiff = false;
 
@@ -163,6 +164,41 @@ document.body.addEventListener("click", (e) => {
 	}
 });
 
+// ── Storyboard-only mode: hide unnecessary DOM elements ──
+if (STORYBOARD_ONLY) {
+	document.querySelector("#topBar")?.classList.add("hidden");
+	document.querySelector("#settings")?.classList.add("hidden");
+	document.querySelector("#splash")?.classList.add("hidden");
+	document.querySelector("#diffsContainerWrapper")?.classList.add("hidden");
+	document.body.style.background = "black";
+}
+
+// ── postMessage API for iframe embedding ──
+window.addEventListener("message", (event) => {
+	if (window.parent === window) return;
+	if (event.source !== window.parent) return;
+	if (!ALLOWED_ORIGINS.has(event.origin)) return;
+
+	const data = event.data;
+	if (!data || typeof data.type !== "string") return;
+
+	const bms = inject<BeatmapSet>("beatmapset");
+	const audio = bms?.context.consume<Audio>("audio");
+
+	switch (data.type) {
+		case "PLAY":
+			if (bms && audio && audio.state !== "PLAYING") bms.toggle();
+			break;
+		case "PAUSE":
+			if (bms && audio && audio.state === "PLAYING") bms.toggle();
+			break;
+		case "CLOSE":
+			bms?.destroy();
+			postToParent({ type: "CLOSED" }, event.origin);
+			break;
+	}
+});
+
 (async () => {
 	try {
 		await navigator.wakeLock.request("screen");
@@ -182,4 +218,7 @@ document.body.addEventListener("click", (e) => {
 
 	const game = provide("game", new Game());
 	await game.init();
+
+	// Notify parent iframe that josu is ready
+	postToParent({ type: "READY" });
 })();

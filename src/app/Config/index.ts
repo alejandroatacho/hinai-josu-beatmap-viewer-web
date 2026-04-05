@@ -1,4 +1,5 @@
 import { provide } from "../Context";
+import { STORYBOARD_ONLY } from "../Initiator";
 import AudioConfig, { type AudioProps } from "./AudioConfig";
 import BackgroundConfig, { type BackgroundProps } from "./BackgroundConfig";
 import ColorConfig from "./ColorConfig";
@@ -58,13 +59,15 @@ export default class Config {
 		this.background = provide(
 			"config/background",
 			new BackgroundConfig(
-				savedSettings?.background ?? {
-					backgroundDim: 60,
-					backgroundBlur: 0,
-					storyboard: true,
-					video: true,
-					breakSection: false,
-				},
+				STORYBOARD_ONLY
+					? { backgroundDim: 0, backgroundBlur: 0, storyboard: true, video: true, breakSection: false }
+					: (savedSettings?.background ?? {
+						backgroundDim: 60,
+						backgroundBlur: 0,
+						storyboard: true,
+						video: true,
+						breakSection: false,
+					}),
 			),
 		);
 		this.audio = provide(

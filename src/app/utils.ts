@@ -171,6 +171,26 @@ export const difficultyRange = (
 	return mid;
 };
 
+// ── Parent iframe messaging (origin-scoped) ──
+export const ALLOWED_ORIGINS = new Set([
+	"https://hinamizawa.ai", "https://stg.hinamizawa.ai",
+	"https://kawata.pw", "https://web.lokiverse.com",
+	"http://localhost:5157", "http://localhost:3000",
+	typeof window !== "undefined" ? window.location.origin : "",
+]);
+
+export function postToParent(message: Record<string, unknown>, targetOrigin?: string) {
+	if (typeof window === "undefined" || !window.parent || window.parent === window) return;
+	if (targetOrigin) {
+		try { window.parent.postMessage(message, targetOrigin); } catch {}
+		return;
+	}
+	for (const origin of ALLOWED_ORIGINS) {
+		if (!origin) continue;
+		try { window.parent.postMessage(message, origin); } catch {}
+	}
+}
+
 export const closestPointTo = (p: Vector2, start: Vector2, end: Vector2): Vector2 => {
 	const v = end.subtract(start);
 	const w = p.subtract(start);

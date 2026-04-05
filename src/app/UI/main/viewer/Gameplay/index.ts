@@ -3,7 +3,6 @@ import { LayoutContainer } from "@pixi/layout/components";
 import { Tween } from "@tweenjs/tween.js";
 import { Vector2 } from "osu-classes";
 import {
-	// Application,
 	Assets,
 	Container,
 	Graphics,
