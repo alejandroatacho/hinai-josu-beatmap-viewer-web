@@ -174,6 +174,7 @@ export const difficultyRange = (
 // ── Parent iframe messaging (origin-scoped) ──
 export const ALLOWED_ORIGINS = new Set([
 	"https://hinamizawa.ai", "https://stg.hinamizawa.ai",
+	"https://kawata.pw", "https://web.lokiverse.com",
 	"http://localhost:5157", "http://localhost:3000",
 	typeof window !== "undefined" ? window.location.origin : "",
 ]);
