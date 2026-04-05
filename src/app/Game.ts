@@ -480,12 +480,15 @@ export class Game {
 			}
 			try {
 				await this.loadSetID(setId);
+				// Verify load actually succeeded (loadSetID swallows errors internally)
+				const bms = inject<BeatmapSet>("beatmapset");
+				if (!bms || bms.difficulties.length === 0) {
+					postToParent({ type: "ERROR", message: `Failed to load beatmapset ${setId}` });
+					return true;
+				}
 				// In storyboard-only mode, auto-select first diff
-				if (STORYBOARD_ONLY) {
-					const bms = inject<BeatmapSet>("beatmapset");
-					if (bms && !bms.master && bms.difficulties.length > 0) {
-						await bms.loadMaster(0);
-					}
+				if (STORYBOARD_ONLY && !bms.master && bms.difficulties.length > 0) {
+					await bms.loadMaster(0);
 				}
 				postToParent({ type: "LOADED", beatmapsetId: numericId });
 			} catch (err) {

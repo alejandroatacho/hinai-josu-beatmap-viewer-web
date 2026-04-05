@@ -180,6 +180,7 @@ export const ALLOWED_ORIGINS = new Set([
 ]);
 
 export function postToParent(message: Record<string, unknown>, targetOrigin?: string) {
+	if (typeof window === "undefined" || !window.parent || window.parent === window) return;
 	if (targetOrigin) {
 		try { window.parent.postMessage(message, targetOrigin); } catch {}
 		return;

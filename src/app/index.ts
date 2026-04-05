@@ -5,6 +5,7 @@ import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
 import { HINAI_ENVIRONMENT, STORYBOARD_ONLY } from "./Initiator";
+import { ALLOWED_ORIGINS, postToParent } from "./utils";
 
 let _loadingDiff = false;
 
@@ -173,8 +174,6 @@ if (STORYBOARD_ONLY) {
 }
 
 // ── postMessage API for iframe embedding ──
-import { ALLOWED_ORIGINS, postToParent } from "./utils";
-
 window.addEventListener("message", (event) => {
 	if (window.parent === window) return;
 	if (event.source !== window.parent) return;
