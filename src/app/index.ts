@@ -173,22 +173,7 @@ if (STORYBOARD_ONLY) {
 }
 
 // ── postMessage API for iframe embedding ──
-const ALLOWED_ORIGINS = new Set([
-	"https://hinamizawa.ai", "https://stg.hinamizawa.ai",
-	"http://localhost:5157", "http://localhost:3000",
-	window.location.origin,
-]);
-
-function postToParent(message: Record<string, unknown>, targetOrigin?: string) {
-	if (targetOrigin) {
-		try { window.parent.postMessage(message, targetOrigin); } catch {}
-		return;
-	}
-	for (const origin of ALLOWED_ORIGINS) {
-		if (origin === window.location.origin) continue;
-		try { window.parent.postMessage(message, origin); } catch {}
-	}
-}
+import { ALLOWED_ORIGINS, postToParent } from "./utils";
 
 window.addEventListener("message", (event) => {
 	if (!ALLOWED_ORIGINS.has(event.origin)) return;

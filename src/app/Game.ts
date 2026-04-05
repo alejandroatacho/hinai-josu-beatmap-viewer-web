@@ -20,6 +20,7 @@ import type FullscreenConfig from "./Config/FullscreenConfig";
 import type RendererConfig from "./Config/RendererConfig";
 import { inject, provide } from "./Context";
 import { STORYBOARD_ONLY } from "./Initiator";
+import { postToParent } from "./utils";
 import ResponsiveHandler from "./ResponsiveHandler";
 import SkinManager from "./Skinning/SkinManager";
 import Loading from "./UI/loading";
@@ -475,14 +476,15 @@ export class Game {
 			try {
 				await this.loadSetID(setId);
 				// In storyboard-only mode, auto-select first diff
-				const bms = inject<BeatmapSet>("beatmapset");
-				if (bms && !bms.master && bms.difficulties.length > 0) {
-					await bms.loadMaster(0);
+				if (STORYBOARD_ONLY) {
+					const bms = inject<BeatmapSet>("beatmapset");
+					if (bms && !bms.master && bms.difficulties.length > 0) {
+						await bms.loadMaster(0);
+					}
 				}
-				// Notify parent iframe on success
-				try { window.parent.postMessage({ type: "LOADED", beatmapsetId: +setId }, "*"); } catch {}
+				postToParent({ type: "LOADED", beatmapsetId: +setId });
 			} catch (err) {
-				try { window.parent.postMessage({ type: "ERROR", message: String(err) }, "*"); } catch {}
+				postToParent({ type: "ERROR", message: String(err) });
 			}
 			return true;
 		}
