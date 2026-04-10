@@ -11,9 +11,11 @@ export default class Video {
 	});
 
 	constructor() {
+		// Use full href (minus query) so WASM resolves correctly when served under a subpath
+		const base = window.location.href.split("?")[0].replace(/\/+$/, "");
 		this.worker.postMessage({
 			type: MessageType.Init,
-			data: window.location.origin,
+			data: base,
 		});
 
 		this.worker.addEventListener(
