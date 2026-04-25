@@ -5,7 +5,7 @@ import type BeatmapSet from "./BeatmapSet";
 import { inject, provide } from "./Context";
 import { Game } from "./Game";
 import { HINAI_ENVIRONMENT, STORYBOARD_ONLY } from "./Initiator";
-import { ALLOWED_ORIGINS, postToParent } from "./utils";
+import { postToParent } from "./utils";
 
 let _loadingDiff = false;
 
@@ -164,6 +164,41 @@ document.body.addEventListener("click", (e) => {
 	}
 });
 
+// ── Embed attribution: small "powered by hinamizawa.ai" badge when iframed ──
+// Only renders inside an iframe — standalone josu.hinamizawa.ai stays uncluttered.
+// This is the public-embed advertising surface; if it ever becomes a problem,
+// embedders can hide it with a CSS overlay on their side.
+if (typeof window !== "undefined" && window.parent !== window) {
+	const badge = document.createElement("a");
+	badge.href = "https://hinamizawa.ai";
+	badge.target = "_blank";
+	badge.rel = "noopener noreferrer";
+	badge.textContent = "powered by hinamizawa.ai";
+	badge.style.cssText = [
+		"position:fixed",
+		"bottom:6px",
+		"right:8px",
+		"z-index:2147483647",
+		"font:11px/1 system-ui,-apple-system,sans-serif",
+		"color:rgba(255,255,255,0.5)",
+		"background:rgba(0,0,0,0.4)",
+		"padding:3px 7px",
+		"border-radius:3px",
+		"text-decoration:none",
+		"pointer-events:auto",
+		"backdrop-filter:blur(4px)",
+		"-webkit-backdrop-filter:blur(4px)",
+		"transition:color 0.15s",
+	].join(";");
+	badge.addEventListener("mouseenter", () => { badge.style.color = "rgba(255,255,255,0.9)"; });
+	badge.addEventListener("mouseleave", () => { badge.style.color = "rgba(255,255,255,0.5)"; });
+	if (document.body) {
+		document.body.appendChild(badge);
+	} else {
+		document.addEventListener("DOMContentLoaded", () => document.body.appendChild(badge), { once: true });
+	}
+}
+
 // ── Storyboard-only mode: hide unnecessary DOM elements ──
 if (STORYBOARD_ONLY) {
 	document.querySelector("#topBar")?.classList.add("hidden");
@@ -173,11 +208,13 @@ if (STORYBOARD_ONLY) {
 	document.body.style.background = "black";
 }
 
-// ── postMessage API for iframe embedding ──
+// ── postMessage API for iframe embedding (public) ──
+// Origin allowlist intentionally absent — see utils.ts for the safety rationale.
+// `event.source === window.parent` stays as cheap defense against same-page
+// non-parent windows (popups/openers) trying to drive us.
 window.addEventListener("message", (event) => {
 	if (window.parent === window) return;
 	if (event.source !== window.parent) return;
-	if (!ALLOWED_ORIGINS.has(event.origin)) return;
 
 	const data = event.data;
 	if (!data || typeof data.type !== "string") return;
