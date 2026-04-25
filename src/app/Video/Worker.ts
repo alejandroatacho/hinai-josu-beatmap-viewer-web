@@ -300,33 +300,50 @@ class VideoEngine {
 	}
 
 	binarySearch(value: number) {
-		// Guard: empty chunks array — return 0 to avoid undefined access
+		// Returns the chunk index whose timestamp is closest to `value`. Used
+		// by _seek() to translate a wall-clock seek target (μs) into the
+		// chunk index to start decoding from.
+		//
+		// Previous bug: with `while (start < end)`, when no exact match
+		// existed the pointers collapsed onto the same index, so the
+		// "compare nearer neighbor" step at the bottom compared the same
+		// timestamp to itself. Concrete failure: searching for 12 in
+		// [10, 20, 30, 40, 50] returned index 1 (ts=20) even though index 0
+		// (ts=10) was strictly closer (distance 2 vs 8).
+		//
+		// Fix: classic `while (start <= end)` binary search. When no exact
+		// match exists, the loop terminates with `end` pointing at the last
+		// index whose timestamp is <= value and `start` pointing at the
+		// first index whose timestamp is > value (either may underflow /
+		// overflow the array, hence the clamp). Then pick whichever
+		// neighbor is nearer.
 		if (this.encodedChunks.length === 0) return 0;
 
 		let start = 0;
 		let end = this.encodedChunks.length - 1;
 
-		while (start < end) {
+		while (start <= end) {
 			const mid = start + Math.floor((end - start) / 2);
 
 			if (this.encodedChunks[mid].timestamp === value) return mid;
 			if (value < this.encodedChunks[mid].timestamp) {
 				end = mid - 1;
-				continue;
-			}
-			if (value > this.encodedChunks[mid].timestamp) {
+			} else {
 				start = mid + 1;
 			}
 		}
 
-		// Clamp indices to valid range before accessing .timestamp
+		// `end` may be -1 (value < all timestamps) and `start` may be
+		// chunks.length (value > all timestamps). Clamp before deref.
 		start = Math.max(0, Math.min(start, this.encodedChunks.length - 1));
 		end = Math.max(0, Math.min(end, this.encodedChunks.length - 1));
 
-		const pre = this.encodedChunks[start].timestamp;
-		const post = this.encodedChunks[end].timestamp;
+		const lowDist = Math.abs(value - this.encodedChunks[end].timestamp);
+		const highDist = Math.abs(value - this.encodedChunks[start].timestamp);
 
-		return Math.abs(value - pre) < Math.abs(value - post) ? start : end;
+		// Tie → prefer the lower-timestamp side (`end`); matches the
+		// original `<` comparison's tie behavior.
+		return lowDist <= highDist ? end : start;
 	}
 }
 
