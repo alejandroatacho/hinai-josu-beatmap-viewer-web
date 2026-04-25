@@ -199,9 +199,18 @@ class VideoEngine {
 
 				if (i >= this.encodedChunks.length) {
 					this.status = "STOP";
-					// Guard: flush only if decoder has been configured (demux() completed)
+					// Guard: flush only if decoder has been configured (demux() completed).
+					//
+					// `VideoDecoder.flush()` returns a Promise. We MUST await it so that:
+					//   - rejections (e.g. decoder closed mid-flush) propagate into the
+					//     surrounding try/catch and trigger reInitDecoder() instead of
+					//     surfacing as an unhandled rejection.
+					//   - any frames still in the decoder pipeline are drained before we
+					//     reset currentIndex; otherwise late `output()` callbacks for the
+					//     prior playback land after we've already rewound to 0 and step
+					//     on the next play cycle.
 					if (this.decoder.state === "configured") {
-						this.decoder.flush();
+						await this.decoder.flush();
 					}
 					this.currentIndex = 0;
 					return;

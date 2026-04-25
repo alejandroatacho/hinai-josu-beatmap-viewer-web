@@ -11,8 +11,20 @@ export default class Video {
 	});
 
 	constructor() {
-		// Use full href (minus query) so WASM resolves correctly when served under a subpath
-		const base = window.location.href.split("?")[0].replace(/\/+$/, "");
+		// Resolve the WASM base against the document directory, not window.location.href.
+		//
+		// Using location.href breaks two real cases for the iframe embed:
+		//   1. Subpaths that point at a file (e.g. ".../josu/index.html") — the
+		//      filename ends up in `base`, so the worker fetches
+		//      ".../index.html/web-demuxer.wasm" → 404.
+		//   2. Hash-routed parents (e.g. "...#/some/route") — the fragment leaks
+		//      into the resolved URL.
+		//
+		// `new URL(".", document.baseURI)` always yields the directory of the
+		// current document (honoring any <base href>), so the worker can append
+		// "/web-demuxer.wasm" safely. Trailing slashes are trimmed because the
+		// worker concatenates with a leading `/`.
+		const base = new URL(".", document.baseURI).toString().replace(/\/+$/, "");
 		this.worker.postMessage({
 			type: MessageType.Init,
 			data: base,
