@@ -171,24 +171,15 @@ export const difficultyRange = (
 	return mid;
 };
 
-// ── Parent iframe messaging (origin-scoped) ──
-export const ALLOWED_ORIGINS = new Set([
-	"https://hinamizawa.ai", "https://stg.hinamizawa.ai",
-	"https://kawata.pw", "https://web.lokiverse.com",
-	"http://localhost:5157", "http://localhost:3000",
-	typeof window !== "undefined" ? window.location.origin : "",
-]);
-
-export function postToParent(message: Record<string, unknown>, targetOrigin?: string) {
+// ── Parent iframe messaging — public embed API ──
+// josu's iframe surface is intentionally open. Inbound: PLAY/PAUSE/CLOSE
+// (idempotent media controls, no payload). Outbound: READY/LOADED/ERROR/CLOSED
+// (signals only, no sensitive data). No user data, no auth, no exfiltration
+// vector — the API is too narrow to weaponize, so a wildcard targetOrigin is
+// safe for outbound and we don't gate inbound by origin either.
+export function postToParent(message: Record<string, unknown>, targetOrigin: string = "*") {
 	if (typeof window === "undefined" || !window.parent || window.parent === window) return;
-	if (targetOrigin) {
-		try { window.parent.postMessage(message, targetOrigin); } catch {}
-		return;
-	}
-	for (const origin of ALLOWED_ORIGINS) {
-		if (!origin) continue;
-		try { window.parent.postMessage(message, origin); } catch {}
-	}
+	try { window.parent.postMessage(message, targetOrigin); } catch {}
 }
 
 export const closestPointTo = (p: Vector2, start: Vector2, end: Vector2): Vector2 => {

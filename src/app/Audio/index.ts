@@ -146,9 +146,8 @@ export default class Audio extends ScopedClass {
 	}
 
 	play() {
-		if (this.state === "PLAYING")
-			throw new Error("You cannot start an already started audio!");
-		if (!this.player) throw new Error("You haven't initiated audio yet!");
+		if (this.state === "PLAYING") return; // Already playing — no-op instead of throw
+		if (!this.player) return; // Audio not yet loaded — silently skip (race with user click)
 		this.state = "PLAYING";
 
 		Tone.getTransport().seconds =
@@ -169,9 +168,8 @@ export default class Audio extends ScopedClass {
 	}
 
 	pause() {
-		if (this.state === "STOPPED")
-			throw new Error("You cannot stop an already stopped audio!");
-		if (!this.player) throw new Error("You haven't initiated audio yet!");
+		if (this.state === "STOPPED") return; // Already stopped — no-op
+		if (!this.player) return; // Audio not yet loaded — silently skip
 		this.state = "STOPPED";
 
 		Tone.getTransport().pause();
