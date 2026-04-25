@@ -199,7 +199,10 @@ class VideoEngine {
 
 				if (i >= this.encodedChunks.length) {
 					this.status = "STOP";
-					this.decoder.flush();
+					// Guard: flush only if decoder has been configured (demux() completed)
+					if (this.decoder.state === "configured") {
+						this.decoder.flush();
+					}
 					this.currentIndex = 0;
 					return;
 				}
@@ -225,15 +228,21 @@ class VideoEngine {
 	}
 
 	async seekToChunk(index: number) {
+		// Guard: only flush if decoder is configured and chunks exist
+		if (this.decoder.state !== "configured" || this.encodedChunks.length === 0) return;
+		if (index < 0 || index >= this.encodedChunks.length) return;
+
 		await this.decoder.flush();
 
 		const i = this.findKeyChunk(index);
 
 		for (let j = i; j < index; j++) {
 			const chunk = this.encodedChunks[j];
-			this.decoder.decode(chunk);
+			if (chunk) this.decoder.decode(chunk);
 		}
-		this.decoder.decode(this.encodedChunks[index]);
+		if (this.encodedChunks[index]) {
+			this.decoder.decode(this.encodedChunks[index]);
+		}
 	}
 
 	findKeyChunk(index: number) {
@@ -282,6 +291,9 @@ class VideoEngine {
 	}
 
 	binarySearch(value: number) {
+		// Guard: empty chunks array — return 0 to avoid undefined access
+		if (this.encodedChunks.length === 0) return 0;
+
 		let start = 0;
 		let end = this.encodedChunks.length - 1;
 
@@ -297,6 +309,10 @@ class VideoEngine {
 				start = mid + 1;
 			}
 		}
+
+		// Clamp indices to valid range before accessing .timestamp
+		start = Math.max(0, Math.min(start, this.encodedChunks.length - 1));
+		end = Math.max(0, Math.min(end, this.encodedChunks.length - 1));
 
 		const pre = this.encodedChunks[start].timestamp;
 		const post = this.encodedChunks[end].timestamp;
